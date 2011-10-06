@@ -1,8 +1,8 @@
 #!/dev/null
+package Minecraft::Server::Events;
+
 use strict;
 use warnings;
-
-package Minecraft::Server::Events;
 
 sub new {
 	my ($class) = @_;

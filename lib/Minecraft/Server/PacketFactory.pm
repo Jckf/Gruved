@@ -1,9 +1,8 @@
 #!/dev/null
-use strict;
-use warnings;
-
 package Minecraft::Server::PacketFactory;
 
+use strict;
+use warnings;
 use Encode;
 
 my %data_types = %{{
@@ -19,13 +18,14 @@ my %data_types = %{{
 }};
 
 my %packet_structures = %{{
-	0x00 => [],
-	0x01 => ['int','string16','long','byte'],
+	0x00 => ['int'],
+	0x01 => ['int','string16','long','int','byte','byte','byte','byte'],
 	0x02 => ['string16'],
 	0x03 => ['string16'],
 	0x0D => ['double','double','double','double','float','float','bool'],
 	0x32 => ['int','int','bool'],
-	0x33 => ['int','short','int','byte','byte','byte','int','raw']
+	0x33 => ['int','short','int','byte','byte','byte','int','raw'],
+	0xFF => ['string16']
 }};
 
 sub new {

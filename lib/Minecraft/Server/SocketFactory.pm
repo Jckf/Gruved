@@ -1,13 +1,12 @@
 #!/dev/null
+package Minecraft::Server::SocketFactory;
+
 use strict;
 use warnings;
+use Time::HiRes 'sleep';
 use IO::Select;
 use IO::Socket::INET;
 use Minecraft::Server::Events;
-
-package Minecraft::Server::SocketFactory;
-
-use Time::HiRes qw(sleep);
 
 sub new {
 	my ($class,%options) = @_;
@@ -48,25 +47,22 @@ sub run {
 				$self->{'events'}->trigger('can_read',$socket);
 			}
 		}
+		foreach my $socket ($self->{'select'}->has_exception(0)) {
+			if (fileno($socket) == fileno($self->{'listener'})) {
+				undef $self->{'listener'};
+			} else {
+				$self->{'events'}->trigger('has_exception',$socket);
+				$self->close($socket);
+			}
+		}
 	}
 
 	return 0;
 }
 
-sub broadcast {
-	my ($self,$data,$exclude) = @_;
-
-	my @sockets = $self->{'select'}->handles();
-	foreach my $socket (@sockets) {
-		next if ((defined $exclude && fileno($socket) == fileno($exclude)) || fileno($socket) == fileno($self->{'listener'}));
-		print $socket ($data);
-	}
-
-	return 1;
-}
-
 sub close {
 	my ($self,$socket) = @_;
+	$self->{'events'}->trigger('close',$socket);
 	$self->{'select'}->remove($socket);
 	$socket->close();
 	return 1;

@@ -1,10 +1,9 @@
 #!/dev/null
+package Minecraft::Server::PacketParser;
+
 use strict;
 use warnings;
 use Minecraft::Server::Events;
-
-package Minecraft::Server::PacketParser;
-
 use Encode;
 
 my %data_types = %{{
@@ -45,14 +44,25 @@ my %data_types = %{{
 }};
 
 my %packet_structures = %{{
-	0x00 => [],
-	0x01 => ['int','string16','long','byte'],
+	0x00 => ['int'],
+	0x01 => ['int','string16','long','int','byte','byte','byte','byte'],
 	0x02 => ['string16'],
 	0x03 => ['string16'],
-	0x0A => ['byte'],
+	0x07 => ['int','int','bool'],
+	0x09 => ['byte','byte','byte','short','long'],
+	0x0A => ['bool'],
 	0x0B => ['double','double','double','double','bool'],
 	0x0C => ['float','float','bool'],
-	0x0D => ['double','double','double','double','float','float','bool']
+	0x0D => ['double','double','double','double','float','float','bool'],
+	0x0E => ['byte','int','byte','int','byte'],
+	0x0F => ['int','byte','int','byte','short','byte','short'],
+	0x10 => ['short'],
+	0x12 => ['int','byte'],
+	0x13 => ['int','byte'],
+	0x65 => ['byte'],
+	0x66 => ['byte','short','byte','short','bool','short','byte','short'],
+	0xFE => [],
+	0xFF => []
 }};
 
 sub new {
@@ -73,9 +83,12 @@ sub parse {
 			push(@data,&{$data_types{$data_type}}($socket));
 		}
 
-		my @filters = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
-		foreach my $filter (@filters) {
-			return 0 if !$filter;
+		my $filters = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
+		if (ref($filters) eq 'ARRAY') {
+			print 'Filtering..' . "\n";
+			foreach my $filter (@{$filters}) {
+				return 0 if !$filter;
+			}
 		}
 
 		$self->{'events'}->trigger($packet_id,$socket,@data);

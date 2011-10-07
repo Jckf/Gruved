@@ -22,6 +22,7 @@ my %packet_structures = %{{
 	0x01 => ['int','string16','long','int','byte','byte','byte','byte'],
 	0x02 => ['string16'],
 	0x03 => ['string16'],
+	0x04 => ['long'],
 	0x0D => ['double','double','double','double','float','float','bool'],
 	0x32 => ['int','int','bool'],
 	0x33 => ['int','short','int','byte','byte','byte','int','raw'],

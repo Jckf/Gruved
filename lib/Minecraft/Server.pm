@@ -11,6 +11,8 @@ sub new {
 	$self->{'description'} = 'A Minecraft server';
 	$self->{'max_players'} = 32;
 
+	$self->{'time'} = 0;
+
 	$self->{'players'} = [];
 	$self->{'entities'} = [];
 

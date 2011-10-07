@@ -60,6 +60,7 @@ sub run {
 				}
 			}
 		}
+		$self->{'events'}->trigger('tick');
 		sleep 0.01 if !$loops;
 	}
 

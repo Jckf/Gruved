@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use Time::HiRes;
 use lib './lib';
 use Minecraft::Server;
 use Minecraft::Server::SocketFactory;
@@ -10,12 +11,13 @@ use Minecraft::Server::Chunk;
 use Minecraft::Server::Player;
 use Minecraft::Server::EntityNamed;
 
-my $srv = Minecraft::Server->new();
+our $srv = Minecraft::Server->new();
 
 our $sf = Minecraft::Server::SocketFactory->new();
 my $pp = Minecraft::Server::PacketParser->new();
 our $pf = Minecraft::Server::PacketFactory->new();
 
+$sf->{'events'}->bind('tick',\&sf_tick);
 $sf->{'events'}->bind('accept',\&sf_accept);
 $sf->{'events'}->bind('can_read',\&sf_can_read);
 $sf->{'events'}->bind('has_exception',\&sf_has_exception);
@@ -35,6 +37,17 @@ $pp->{'events'}->bind(0xFF,\&pp_0xFF);
 
 $sf->run();
 
+sub sf_tick {
+	my $now = (time() * 20) % 24000;
+	if ($srv->{'time'} != $now) {
+		$srv->{'time'} = $now;
+
+		foreach my $p ($srv->get_players()) {
+			$p->set_time($srv->{'time'});
+		}
+	}
+}
+
 sub sf_accept {
 	print 'Ohai!' . "\n";
 
@@ -50,21 +63,24 @@ sub sf_can_read {
 	my $p = $srv->get_player($s);
 
 	if (!defined $p) {
-		#print 'Getting shit from a disconnected client. Fuck that.' . "\n";
+		print 'Getting shit from a disconnected client. Fuck that.' . "\n";
 		return;
 	}
 
-	if ($pp->parse($s)) {
+	if (!$pp->parse($s)) {
+		print 'Could not parse.' . "\n";
+		$p->kick('Junk in data stream.');
+		return 0;
+	}
+
+	if ($p->{'runlevel'} == 2) {
 		if (time() - $p->{'keepalive'} >= 10) {
 			$p->{'keepalive'} = time();
 			$p->ping();
 		}
-		return 1;
 	}
 
-	print 'Could not parse.' . "\n";
-	$p->kick('Junk in data stream.');
-	return 0;
+	return 1;
 }
 
 sub sf_has_exception {
@@ -142,6 +158,8 @@ sub pp_0x01 {
 			$srv->{'max_players'}
 		)
 	);
+
+	$p->set_time($srv->{'time'});
 
 	my $chunk = Minecraft::Server::Chunk->new();
 	my $chunk2 = Minecraft::Server::Chunk->new();

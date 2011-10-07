@@ -50,6 +50,15 @@ sub message {
 	);
 }
 
+sub set_time {
+	$_[0]->send(
+		$::pf->build(
+			0x04,
+			$_[1]
+		)
+	);
+}
+
 sub update_position {
 	my ($self) = @_;
 

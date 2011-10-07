@@ -6,6 +6,7 @@ use Minecraft::Server;
 use Minecraft::Server::SocketFactory;
 use Minecraft::Server::PacketParser;
 use Minecraft::Server::PacketFactory;
+use Minecraft::Server::Chunk;
 use Minecraft::Server::Player;
 use Minecraft::Server::EntityNamed;
 
@@ -35,25 +36,64 @@ $pp->{'events'}->bind(0xFF,\&pp_0xFF);
 $sf->run();
 
 sub sf_accept {
-	my ($s) = @_;
+	print 'Ohai!' . "\n";
 
 	$srv->add_player(
 		Minecraft::Server::Player->new(
-			'socket' => $s
+			'socket' => $_[0]
 		)
 	);
 }
 
 sub sf_can_read {
-	$sf->close($_[0]) if !$pp->parse($_[0]);
+	my ($s) = @_;
+	my $p = $srv->get_player($s);
+
+	if (!defined $p) {
+		#print 'Getting shit from a disconnected client. Fuck that.' . "\n";
+		return;
+	}
+
+	if ($pp->parse($s)) {
+		if (time() - $p->{'keepalive'} >= 10) {
+			$p->{'keepalive'} = time();
+			$p->ping();
+		}
+		return 1;
+	}
+
+	print 'Could not parse.' . "\n";
+	$p->kick('Junk in data stream.');
+	return 0;
 }
 
 sub sf_has_exception {
+	print 'Has exception.' . "\n";
 	$sf->close($_[0]);
 }
 
 sub sf_close {
-	$srv->remove_player($_[0]);
+	my ($s) = @_;
+	my $p = $srv->get_player($s);
+
+	print 'Close.' . "\n";
+
+	if ($p->{'runlevel'} == 2) {
+		$srv->broadcast('§e' . $p->{'username'} . ' left the game.');
+
+		foreach my $o ($srv->get_players()) {
+			$o->send(
+				$pf->build(
+					0xC9,
+					$p->{'username'},
+					0,
+					0
+				)
+			);
+		}
+	}
+
+	$srv->remove_player($s);
 }
 
 sub pp_filter {
@@ -71,6 +111,8 @@ sub pp_filter {
 	} elsif ($p->{'runlevel'} == 2) {
 		return 1;
 	}
+
+	print 'Denied by filter rule.' . "\n";
 
 	return 0;
 }
@@ -101,9 +143,84 @@ sub pp_0x01 {
 		)
 	);
 
+	my $chunk = Minecraft::Server::Chunk->new();
+	my $chunk2 = Minecraft::Server::Chunk->new();
+	foreach my $x (0 .. 16) {
+		foreach my $z (0 .. 16) {
+			# Dummy chunk.
+			$chunk->set_block($x,63,$z,Minecraft::Server::Block->new(
+				'type' => 1
+			));
+			$chunk->set_block($x,64,$z,Minecraft::Server::Block->new(
+				'type' => 3
+			));
+			$chunk->set_block($x,65,$z,Minecraft::Server::Block->new(
+				'type' => 2
+			));
+
+			# Dummy chunk with water.
+			$chunk2->set_block($x,63,$z,Minecraft::Server::Block->new(
+				'type' => 1
+			));
+			$chunk2->set_block($x,64,$z,Minecraft::Server::Block->new(
+				'type' => 3
+			));
+			$chunk2->set_block($x,65,$z,Minecraft::Server::Block->new(
+				'type' => 9
+			));
+		}
+	}
+	$chunk = $chunk->deflate();
+	$chunk2 = $chunk2->deflate();
+
+	foreach my $cx (-3 .. 3) {
+		foreach my $cz (-3 .. 3) {
+			$p->send(
+				$pf->build(
+					0x32,
+					$cx,
+					$cz,
+					1
+				),
+				$pf->build(
+					0x33,
+					$cx * 16,
+					0,
+					$cz * 16,
+					15,
+					127,
+					15,
+					length($cx == 1 && $cz == 0 ? $chunk2 : $chunk),
+					($cx == 1 && $cz == 0 ? $chunk2 : $chunk)
+				)
+			);
+		}
+	}
+
 	$p->update_position();
 
 	$p->{'runlevel'} = 2;
+
+	$srv->broadcast('§e' . $p->{'username'} . ' joined the game.');
+
+	foreach my $o ($srv->get_players()) {
+		$o->send(
+			$pf->build(
+				0xC9,
+				$p->{'username'},
+				1,
+				$p->{'latency'}
+			)
+		);
+		$p->send(
+			$pf->build(
+				0xC9,
+				$o->{'username'},
+				1,
+				$o->{'latency'}
+			)
+		);
+	}
 }
 
 sub pp_0x02 {
@@ -124,15 +241,7 @@ sub pp_0x02 {
 
 sub pp_0x03 {
 	my ($s,$msg) = @_;
-
-	# We don't know who's around yet. Send it to ourself for now.
-	my $p = $srv->get_player($s);
-	$p->send(
-		$pf->build(
-			0x03,
-			$p->{'username'} . ': ' . $msg
-		)
-	);
+	$srv->broadcast($srv->get_player($s)->{'username'} . ': ' . $msg);
 }
 
 sub pp_0x0A {
@@ -157,7 +266,7 @@ sub pp_0x0D {
 sub pp_0xFE {
 	$srv->get_player($_[0])->kick(
 		$srv->{'description'} . '§' .
-		(length(@{$srv->{'players'}}) - 1) . '§' .
+		$srv->get_players() . '§' .
 		$srv->{'max_players'}
 	);
 }

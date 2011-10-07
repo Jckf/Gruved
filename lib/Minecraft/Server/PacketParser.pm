@@ -96,6 +96,8 @@ sub parse {
 		return 1;
 	}
 
+	print 'What the hell is 0x' . uc(unpack('H*',chr($packet_id))) . '?' . "\n";
+
 	return 0;
 }
 

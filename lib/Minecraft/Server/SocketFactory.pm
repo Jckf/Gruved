@@ -36,18 +36,9 @@ sub run {
 	$self->{'select'}->add($self->{'listener'});
 
 	while ($self->{'listener'}) {
-		my @can_read = $self->{'select'}->can_read(0);
-		sleep 0.01 if !@can_read;
-		foreach my $socket (@can_read) {
-			if (fileno($socket) == fileno($self->{'listener'})) {
-				my $client = $socket->accept();
-				$self->{'select'}->add($client);
-				$self->{'events'}->trigger('accept',$client);
-			} else {
-				$self->{'events'}->trigger('can_read',$socket);
-			}
-		}
+		my $loops = 0;
 		foreach my $socket ($self->{'select'}->has_exception(0)) {
+			$loops++;
 			if (fileno($socket) == fileno($self->{'listener'})) {
 				undef $self->{'listener'};
 			} else {
@@ -55,6 +46,21 @@ sub run {
 				$self->close($socket);
 			}
 		}
+		foreach my $socket ($self->{'select'}->can_read(0)) {
+			$loops++;
+			if (fileno($socket) == fileno($self->{'listener'})) {
+				my $client = $socket->accept();
+				$self->{'select'}->add($client);
+				$self->{'events'}->trigger('accept',$client);
+			} else {
+				foreach my $result ($self->{'events'}->trigger('can_read',$socket)) {
+					if (!$result) {
+						next;
+					}
+				}
+			}
+		}
+		sleep 0.01 if !$loops;
 	}
 
 	return 0;

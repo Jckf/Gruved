@@ -8,37 +8,46 @@ sub new {
 	my ($class) = @_;
 	my $self = {};
 
-	$self->{'description'} = 'A Minecraft server.';
+	$self->{'description'} = 'A Minecraft server';
 	$self->{'max_players'} = 32;
 
 	$self->{'players'} = [];
-	$self->{'sockmap'} = [];
-
 	$self->{'entities'} = [];
 
 	bless($self,$class);
 }
 
 sub add_player {
-	my ($self,$p) = @_;
-	push(@{$self->{'players'}},$p);
-	$self->{'sockmap'}->[fileno($p->{'socket'})] = length(@{$self->{'players'}}) - 1;
+	$_[0]->{'players'}->[fileno($_[1]->{'socket'})] = $_[1];
 }
 
 sub get_player {
 	my ($self,$ref) = @_;
 
 	if (ref($ref) eq 'IO::Socket::INET') {
-		return $self->{'players'}->[$self->{'sockmap'}->[fileno($ref)]];
+		return $self->{'players'}->[fileno($ref)];
 	}
+}
+
+sub get_players {
+	my ($self,$runlevel) = @_;
+	$runlevel = 2 if !defined $runlevel;
+
+	my @result;
+	foreach my $p (@{$self->{'players'}}) {
+		if (defined $p && $p->{'runlevel'} >= $runlevel) {
+			push(@result,$p);
+		}
+	}
+	return @result;
 }
 
 sub remove_player {
 	my ($self,$ref) = @_;
 
 	if (ref($ref) eq 'IO::Socket::INET') {
-		splice(@{$self->{'players'}},$self->{'sockmap'}->[fileno($ref)],1);
-		splice(@{$self->{'sockmap'}},fileno($ref),1);
+		$self->remove_entity($self->{'players'}->[fileno($ref)]->{'entity'}->{'id'}) if defined $self->{'players'}->[fileno($ref)]->{'entity'};
+		splice(@{$self->{'players'}},fileno($ref),1);
 	}
 }
 
@@ -47,6 +56,18 @@ sub add_entity {
 
 	$ent->{'id'} = length(@{$self->{'entities'}});
 	$self->{'entities'}->[$ent->{'id'}] = $ent;
+}
+
+sub remove_entity {
+	splice(@{$_[0]->{'entities'}},$_[1],1);
+}
+
+sub broadcast {
+	my ($self,$msg) = @_;
+
+	foreach my $p ($self->get_players()) {
+		$p->message($msg);
+	}
 }
 
 1;

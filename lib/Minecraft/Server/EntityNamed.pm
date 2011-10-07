@@ -12,7 +12,7 @@ sub new {
 	$self->{'name'} = '';
 
 	$self->{'x'} = 0;
-	$self->{'y'} = 64;
+	$self->{'y'} = 70;
 	$self->{'y2'} = $self->{'y'} + 1.62;
 	$self->{'z'} = 0;
 	$self->{'yaw'} = 0;

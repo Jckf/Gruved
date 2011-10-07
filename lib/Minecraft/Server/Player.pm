@@ -9,6 +9,8 @@ sub new {
 	my $self = {};
 
 	$self->{'runlevel'} = 0;
+	$self->{'keepalive'} = time();
+	$self->{'latency'} = 0;
 	$self->{'username'} = '';
 	$self->{'gamemode'} = 0;
 	$self->{'dimension'} = 0;
@@ -27,22 +29,25 @@ sub send {
 	}
 }
 
-sub kick {
+sub ping {
+	my ($self) = @_;
+	$self->send(
+		$::pf->build(
+			0x00,
+			0
+		)
+	);
+}
+
+sub message {
 	my ($self,$msg) = @_;
 
 	$self->send(
 		$::pf->build(
-			0xFF,
+			0x03,
 			$msg
 		)
 	);
-
-	$::sf->close($self->{'socket'});
-}
-
-sub teleport {
-	my ($self,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
-	$self->{'entity'}->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
 }
 
 sub update_position {
@@ -60,6 +65,24 @@ sub update_position {
 			$self->{'entity'}->{'on_ground'}
 		)
 	);
+}
+
+sub kick {
+	my ($self,$msg) = @_;
+
+	$self->send(
+		$::pf->build(
+			0xFF,
+			$msg
+		)
+	);
+
+	$::sf->close($self->{'socket'});
+}
+
+sub teleport {
+	my ($self,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
+	$self->{'entity'}->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
 }
 
 1;

@@ -3,7 +3,7 @@ package Minecraft::Server::PacketParser;
 
 use strict;
 use warnings;
-use Minecraft::Server::Events;
+use Events;
 use Encode;
 
 my %data_types = %{{
@@ -55,19 +55,39 @@ my %packet_structures = %{{
 	0x0C => ['float','float','bool'],
 	0x0D => ['double','double','double','double','float','float','bool'],
 	0x0E => ['byte','int','byte','int','byte'],
-	0x0F => ['int','byte','int','byte','short','byte','short'],
+	0x0F => ['int','byte','int','byte','short'],
 	0x10 => ['short'],
 	0x12 => ['int','byte'],
 	0x13 => ['int','byte'],
 	0x65 => ['byte'],
 	0x66 => ['byte','short','byte','short','bool','short','byte','short'],
+	0xC3 => ['short','short','int'],
 	0xFE => [],
 	0xFF => []
 }};
 
+my %dynamic_structures = %{{
+	0x0F => sub {
+		if ($_[5] >= 0) {
+			push(@_,&{$data_types{'byte'}}($_[0]));
+			push(@_,&{$data_types{'short'}}($_[0]));
+		}
+		shift;
+		return @_;
+	},
+	0xC3 => sub {
+		sysread($_[0],my $data,$_[3]);
+		return(@_,$data);
+	}
+}};
+
 sub new {
 	my ($object) = @_;
-	my $self = { 'events' => Minecraft::Server::Events->new() };
+	my $self = {};
+
+	$self->{'events'} = Events->new();
+	$self->{'error'} = '';
+
 	bless($self,$object);
 }
 
@@ -82,13 +102,18 @@ sub parse {
 		foreach my $data_type (@{$packet_structures{$packet_id}}) {
 			push(@data,&{$data_types{$data_type}}($socket));
 		}
+		if (defined($dynamic_structures{$packet_id})) {
+			@data = &{$dynamic_structures{$packet_id}}($socket,@data);
+		}
 
-		my $filters = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
-		if (ref($filters) eq 'ARRAY') {
-			print 'Filtering..' . "\n";
-			foreach my $filter (@{$filters}) {
-				return 0 if !$filter;
-			}
+		#if ($packet_id < 0x0A || $packet_id > 0x0D) {
+		#	print '0x' . uc(unpack('H*',chr($packet_id))) . "\n";
+		#	print "\t" . join("\n\t",@data) . "\n\n";
+		#}
+
+		my @filters = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
+		foreach my $filter (@filters) {
+			return 0 if !$filter;
 		}
 
 		$self->{'events'}->trigger($packet_id,$socket,@data);
@@ -96,7 +121,7 @@ sub parse {
 		return 1;
 	}
 
-	print 'What the hell is 0x' . uc(unpack('H*',chr($packet_id))) . '?' . "\n";
+	$self->{'error'} = 'Invalid packet ' . $packet_id . '.';
 
 	return 0;
 }

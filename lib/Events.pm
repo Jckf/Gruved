@@ -1,5 +1,5 @@
 #!/dev/null
-package Minecraft::Server::Events;
+package Events;
 
 use strict;
 use warnings;

@@ -11,7 +11,10 @@ sub new {
 	$self->{'runlevel'} = 0;
 	$self->{'keepalive'} = time();
 	$self->{'latency'} = 0;
+
 	$self->{'username'} = '';
+	$self->{'displayname'} = '';
+
 	$self->{'gamemode'} = 0;
 	$self->{'dimension'} = 0;
 	$self->{'difficulty'} = 0;
@@ -77,7 +80,9 @@ sub update_position {
 }
 
 sub kick {
-	my ($self,$msg) = @_;
+	my ($self,$msg,$automated) = @_;
+
+	$::logger->log('red',($self->{'runlevel'} >= 1 ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
 
 	$self->send(
 		$::pf->build(

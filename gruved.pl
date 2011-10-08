@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Time::HiRes;
 use lib './lib';
+use Logger;
+use Timer;
 use Minecraft::Server;
 use Minecraft::Server::SocketFactory;
 use Minecraft::Server::PacketParser;
@@ -11,13 +12,28 @@ use Minecraft::Server::Chunk;
 use Minecraft::Server::Player;
 use Minecraft::Server::EntityNamed;
 
+our $logger = Logger->new();
+
+$logger->center('Gruved, the Minecraft daemon by Jim C K Flaten');
+$logger->center('Distributed under the GNU GPL v3 license');
+
+$logger->log('magenta','Initializing core objects...');
+
 our $srv = Minecraft::Server->new();
 
 our $sf = Minecraft::Server::SocketFactory->new();
 my $pp = Minecraft::Server::PacketParser->new();
 our $pf = Minecraft::Server::PacketFactory->new();
 
+my $timer_1sec = Timer->new(1);
+
+$logger->log('magenta','Binding to base events...');
+
 $sf->{'events'}->bind('tick',\&sf_tick);
+
+$timer_1sec->bind(\&timer_time);
+$timer_1sec->bind(\&timer_pps);
+
 $sf->{'events'}->bind('accept',\&sf_accept);
 $sf->{'events'}->bind('can_read',\&sf_can_read);
 $sf->{'events'}->bind('has_exception',\&sf_has_exception);
@@ -35,21 +51,33 @@ $pp->{'events'}->bind(0x0D,\&pp_0x0D);
 $pp->{'events'}->bind(0xFE,\&pp_0xFE);
 $pp->{'events'}->bind(0xFF,\&pp_0xFF);
 
+$logger->log('green','Starting server...');
+
 $sf->run();
 
-sub sf_tick {
-	my $now = (time() * 20) % 24000;
-	if ($srv->{'time'} != $now) {
-		$srv->{'time'} = $now;
+$logger->log('red','Server stopped!');
 
-		foreach my $p ($srv->get_players()) {
-			$p->set_time($srv->{'time'});
-		}
+exit;
+
+sub sf_tick {
+	$timer_1sec->tick();
+}
+
+sub timer_time {
+	$srv->{'time'}++;
+
+	foreach my $p ($srv->get_players()) {
+		$p->set_time($srv->{'time'} * 20 % 24000);
 	}
 }
 
+sub timer_pps {
+	$srv->{'pps'} = $srv->{'packets'};
+	$srv->{'packets'} = 0;
+}
+
 sub sf_accept {
-	print 'Ohai!' . "\n";
+	$logger->log('green','New connection from x.x.x.x.');
 
 	$srv->add_player(
 		Minecraft::Server::Player->new(
@@ -63,15 +91,17 @@ sub sf_can_read {
 	my $p = $srv->get_player($s);
 
 	if (!defined $p) {
-		print 'Getting shit from a disconnected client. Fuck that.' . "\n";
+		$logger->log('red','Dead socket has data!');
+		while (sysread($s,my $junk,32) == 32) {}
 		return;
 	}
 
 	if (!$pp->parse($s)) {
-		print 'Could not parse.' . "\n";
-		$p->kick('Junk in data stream.');
+		$p->kick($pp->{'error'});
 		return 0;
 	}
+
+	$srv->{'packets'}++;
 
 	if ($p->{'runlevel'} == 2) {
 		if (time() - $p->{'keepalive'} >= 10) {
@@ -84,7 +114,8 @@ sub sf_can_read {
 }
 
 sub sf_has_exception {
-	print 'Has exception.' . "\n";
+	$logger->log('red','Socket x.x.x.x:x has an exception!');
+
 	$sf->close($_[0]);
 }
 
@@ -92,7 +123,7 @@ sub sf_close {
 	my ($s) = @_;
 	my $p = $srv->get_player($s);
 
-	print 'Close.' . "\n";
+	$logger->log('red','Closing socket x.x.x.x:x...');
 
 	if ($p->{'runlevel'} == 2) {
 		$srv->broadcast('§e' . $p->{'username'} . ' left the game.');
@@ -128,7 +159,7 @@ sub pp_filter {
 		return 1;
 	}
 
-	print 'Denied by filter rule.' . "\n";
+	$logger->log('red','Packet 0x' . uc(unpack('H*',chr($id))) . ' from x.x.x.x:x was denied by filter!');
 
 	return 0;
 }
@@ -219,13 +250,13 @@ sub pp_0x01 {
 
 	$p->{'runlevel'} = 2;
 
-	$srv->broadcast('§e' . $p->{'username'} . ' joined the game.');
+	$srv->broadcast($p->{'displayname'} . ' §ejoined the game.');
 
 	foreach my $o ($srv->get_players()) {
 		$o->send(
 			$pf->build(
 				0xC9,
-				$p->{'username'},
+				$p->{'displayname'} . '§f',
 				1,
 				$p->{'latency'}
 			)
@@ -233,7 +264,7 @@ sub pp_0x01 {
 		$p->send(
 			$pf->build(
 				0xC9,
-				$o->{'username'},
+				$o->{'displayname'} . '§f',
 				1,
 				$o->{'latency'}
 			)
@@ -246,6 +277,7 @@ sub pp_0x02 {
 
 	my $p = $srv->get_player($s);
 	$p->{'username'} = $un;
+	$p->{'displayname'} = ($un eq 'Jckf' ? '§cJckf' : $un);
 
 	$p->send(
 		$pf->build(
@@ -254,12 +286,14 @@ sub pp_0x02 {
 		)
 	);
 
+	$logger->log('green','Accepted handshake from ' . $p->{'username'} . '.');
+
 	$p->{'runlevel'} = 1;
 }
 
 sub pp_0x03 {
 	my ($s,$msg) = @_;
-	$srv->broadcast($srv->get_player($s)->{'username'} . ': ' . $msg);
+	$srv->broadcast($srv->get_player($s)->{'displayname'} . '§f: ' . $msg);
 }
 
 sub pp_0x0A {
@@ -285,7 +319,8 @@ sub pp_0xFE {
 	$srv->get_player($_[0])->kick(
 		$srv->{'description'} . '§' .
 		$srv->get_players() . '§' .
-		$srv->{'max_players'}
+		$srv->{'max_players'},
+		1
 	);
 }
 

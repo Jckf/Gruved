@@ -6,7 +6,7 @@ use warnings;
 use Time::HiRes 'sleep';
 use IO::Select;
 use IO::Socket::INET;
-use Minecraft::Server::Events;
+use Events;
 
 sub new {
 	my ($class,%options) = @_;
@@ -17,7 +17,7 @@ sub new {
 
 	$self->{$_} = $options{$_} for keys %options;
 
-	$self->{'events'} = Minecraft::Server::Events->new();
+	$self->{'events'} = Events->new();
 
 	bless($self,$class);
 }

@@ -16,6 +16,9 @@ sub new {
 	$self->{'players'} = [];
 	$self->{'entities'} = [];
 
+	$self->{'packets'} = 0;
+	$self->{'pps'} = 0;
+
 	bless($self,$class);
 }
 
@@ -66,6 +69,8 @@ sub remove_entity {
 
 sub broadcast {
 	my ($self,$msg) = @_;
+
+	$::logger->log('white',$msg);
 
 	foreach my $p ($self->get_players()) {
 		$p->message($msg);

@@ -1,9 +1,8 @@
 #!/dev/null
-package Minecraft::Server::SocketFactory;
+package SocketFactory;
 
 use strict;
 use warnings;
-use Time::HiRes 'sleep';
 use IO::Select;
 use IO::Socket::INET;
 use Events;
@@ -60,8 +59,7 @@ sub run {
 				}
 			}
 		}
-		$self->{'events'}->trigger('tick');
-		sleep 0.01 if !$loops;
+		$self->{'events'}->trigger('tick',$loops);
 	}
 
 	return 0;

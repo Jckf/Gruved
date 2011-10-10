@@ -1,43 +1,46 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use lib './lib';
+use Time::HiRes 'sleep';
+use lib 'lib';
 use Logger;
 use Timer;
-use Minecraft::Server;
-use Minecraft::Server::SocketFactory;
-use Minecraft::Server::PacketParser;
-use Minecraft::Server::PacketFactory;
-use Minecraft::Server::Chunk;
-use Minecraft::Server::Player;
-use Minecraft::Server::EntityNamed;
+use Server;
+use SocketFactory;
+use PacketParser;
+use PacketFactory;
+use World;
+use Chunk;
+use Player;
+use Entity;
 
-our $logger = Logger->new();
+our $log = Logger->new();
 
-$logger->center('Gruved, the Minecraft daemon by Jim C K Flaten');
-$logger->center('Distributed under the GNU GPL v3 license');
+$log->clear();
 
-$logger->log('magenta','Initializing core objects...');
+$log->header('Gruved, the Minecraft server daemon by Jim C K Flaten');
+$log->header('Distributed under the GNU GPL v3 license');
 
-our $srv = Minecraft::Server->new();
+$log->magenta('Initializing core objects...');
 
-our $sf = Minecraft::Server::SocketFactory->new();
-my $pp = Minecraft::Server::PacketParser->new();
-our $pf = Minecraft::Server::PacketFactory->new();
+our $srv = Server->new();
+our $sf  = SocketFactory->new();
+my  $pp  = PacketParser ->new();
+our $pf  = PacketFactory->new();
 
-my $timer_1sec = Timer->new(1);
+my $t1s  = Timer->new(1);
 
-$logger->log('magenta','Binding to base events...');
+$log->magenta('Binding to core events...');
 
 $sf->{'events'}->bind('tick',\&sf_tick);
 
-$timer_1sec->bind(\&timer_time);
-$timer_1sec->bind(\&timer_pps);
+$t1s->bind(\&timer_time);
+$t1s->bind(\&timer_pps );
 
-$sf->{'events'}->bind('accept',\&sf_accept);
-$sf->{'events'}->bind('can_read',\&sf_can_read);
+$sf->{'events'}->bind('accept',       \&sf_accept);
+$sf->{'events'}->bind('can_read',     \&sf_can_read);
 $sf->{'events'}->bind('has_exception',\&sf_has_exception);
-$sf->{'events'}->bind('close',\&sf_close);
+$sf->{'events'}->bind('close',        \&sf_close);
 
 $pp->{'events'}->bind('filter',\&pp_filter);
 
@@ -51,16 +54,29 @@ $pp->{'events'}->bind(0x0D,\&pp_0x0D);
 $pp->{'events'}->bind(0xFE,\&pp_0xFE);
 $pp->{'events'}->bind(0xFF,\&pp_0xFF);
 
-$logger->log('green','Starting server...');
+$log->magenta('Loading plugins...');
+
+foreach my $plugin (<plugins/*.pm>) {
+	print $_ . "\n";
+}
+
+$log->magenta('Loading worlds...');
+
+# TODO: Automate this based on data on disk.
+my %worlds;
+$worlds{'world'} = new World();
+
+$log->green('Waiting for connections...');
 
 $sf->run();
 
-$logger->log('red','Server stopped!');
+$log->red('Server stopped!');
 
 exit;
 
 sub sf_tick {
-	$timer_1sec->tick();
+	$t1s->tick();
+	sleep 0.01 if !$_[0];
 }
 
 sub timer_time {
@@ -77,10 +93,10 @@ sub timer_pps {
 }
 
 sub sf_accept {
-	$logger->log('green','New connection from x.x.x.x.');
+	$log->green('New connection from x.x.x.x.');
 
 	$srv->add_player(
-		Minecraft::Server::Player->new(
+		Player->new(
 			'socket' => $_[0]
 		)
 	);
@@ -91,12 +107,13 @@ sub sf_can_read {
 	my $p = $srv->get_player($s);
 
 	if (!defined $p) {
-		$logger->log('red','Dead socket has data!');
+		$log->red('Dead socket has data!');
 		while (sysread($s,my $junk,32) == 32) {}
 		return;
 	}
 
 	if (!$pp->parse($s)) {
+		$log->red('Could not parse data! ' . $pp->{'error'});
 		$p->kick($pp->{'error'});
 		return 0;
 	}
@@ -114,8 +131,7 @@ sub sf_can_read {
 }
 
 sub sf_has_exception {
-	$logger->log('red','Socket x.x.x.x:x has an exception!');
-
+	$log->red('Socket x.x.x.x:x has an exception!');
 	$sf->close($_[0]);
 }
 
@@ -123,7 +139,7 @@ sub sf_close {
 	my ($s) = @_;
 	my $p = $srv->get_player($s);
 
-	$logger->log('red','Closing socket x.x.x.x:x...');
+	$log->red('Closing socket x.x.x.x:x...');
 
 	if ($p->{'runlevel'} == 2) {
 		$srv->broadcast('§e' . $p->{'username'} . ' left the game.');
@@ -159,7 +175,7 @@ sub pp_filter {
 		return 1;
 	}
 
-	$logger->log('red','Packet 0x' . uc(unpack('H*',chr($id))) . ' from x.x.x.x:x was denied by filter!');
+	$log->red('Packet 0x' . uc(unpack('H*',chr($id))) . ' from x.x.x.x:x was denied by filter!');
 
 	return 0;
 }
@@ -169,9 +185,12 @@ sub pp_0x01 {
 
 	my $p = $srv->get_player($s);
 
-	$p->{'entity'} = Minecraft::Server::EntityNamed->new(
+	# TODO: Load data from player file.
+
+	$p->{'entity'} = Entity->new(
 		'player' => $p,
-		'name' => $un
+		'name' => $un,
+		'world' => $worlds{'world'}
 	);
 
 	$srv->add_entity($p->{'entity'});
@@ -191,60 +210,6 @@ sub pp_0x01 {
 	);
 
 	$p->set_time($srv->{'time'});
-
-	my $chunk = Minecraft::Server::Chunk->new();
-	my $chunk2 = Minecraft::Server::Chunk->new();
-	foreach my $x (0 .. 16) {
-		foreach my $z (0 .. 16) {
-			# Dummy chunk.
-			$chunk->set_block($x,63,$z,Minecraft::Server::Block->new(
-				'type' => 1
-			));
-			$chunk->set_block($x,64,$z,Minecraft::Server::Block->new(
-				'type' => 3
-			));
-			$chunk->set_block($x,65,$z,Minecraft::Server::Block->new(
-				'type' => 2
-			));
-
-			# Dummy chunk with water.
-			$chunk2->set_block($x,63,$z,Minecraft::Server::Block->new(
-				'type' => 1
-			));
-			$chunk2->set_block($x,64,$z,Minecraft::Server::Block->new(
-				'type' => 3
-			));
-			$chunk2->set_block($x,65,$z,Minecraft::Server::Block->new(
-				'type' => 9
-			));
-		}
-	}
-	$chunk = $chunk->deflate();
-	$chunk2 = $chunk2->deflate();
-
-	foreach my $cx (-3 .. 3) {
-		foreach my $cz (-3 .. 3) {
-			$p->send(
-				$pf->build(
-					0x32,
-					$cx,
-					$cz,
-					1
-				),
-				$pf->build(
-					0x33,
-					$cx * 16,
-					0,
-					$cz * 16,
-					15,
-					127,
-					15,
-					length($cx == 1 && $cz == 0 ? $chunk2 : $chunk),
-					($cx == 1 && $cz == 0 ? $chunk2 : $chunk)
-				)
-			);
-		}
-	}
 
 	$p->update_position();
 
@@ -286,8 +251,6 @@ sub pp_0x02 {
 		)
 	);
 
-	$logger->log('green','Accepted handshake from ' . $p->{'username'} . '.');
-
 	$p->{'runlevel'} = 1;
 }
 
@@ -312,6 +275,9 @@ sub pp_0x0C {
 
 sub pp_0x0D {
 	my ($s,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
+
+	# TODO: Check if the player is inside an unloaded chunk or inside a block. If he is, don't allow movement.
+
 	$srv->get_player($s)->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
 }
 

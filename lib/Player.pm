@@ -1,5 +1,5 @@
 #!/dev/null
-package Minecraft::Server::Player;
+package Player;
 
 use strict;
 use warnings;
@@ -26,18 +26,18 @@ sub new {
 
 sub send {
 	my ($self,@data) = @_;
-
-	foreach (@data) {
-		syswrite($self->{'socket'},$_);
-	}
+	syswrite($self->{'socket'},$_) for @data;
 }
 
 sub ping {
-	my ($self) = @_;
+	my ($self,$id) = @_;
+
+	$id = 0 if !defined $id;
+
 	$self->send(
 		$::pf->build(
 			0x00,
-			0
+			$id
 		)
 	);
 }
@@ -65,6 +65,8 @@ sub set_time {
 sub update_position {
 	my ($self) = @_;
 
+	$self->update_chunks();
+
 	$self->send(
 		$::pf->build(
 			0x0D,
@@ -79,10 +81,68 @@ sub update_position {
 	);
 }
 
+sub update_chunks {
+	my ($self,$x,$z) = @_;
+
+	my $y = 0;
+
+	if (defined($x) && defined($z)) {
+		# TODO: Check if we need to load/unload chunks based on current position and new position (if moving from one chunk to another).
+	} else {
+		$y = 1;
+	}
+
+	if ($y) {
+		foreach my $cx (-$::srv->{'view_distance'} .. $::srv->{'view_distance'} ) {
+			foreach my $cz (-$::srv->{'view_distance'} .. $::srv->{'view_distance'}) {
+				# TODO: Check if this user already has this chunk loaded.
+				$self->load_chunk($cx,$cz);
+			}
+		}
+	}
+}
+
+sub load_chunk {
+	my ($self,$x,$z) = @_;
+
+	my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
+
+	$self->send(
+		$::pf->build(
+			0x32,
+			$x,
+			$z,
+			1
+		),
+		$::pf->build(
+			0x33,
+			$x,
+			0,
+			$z,
+			15,
+			127,
+			15,
+			length($c),
+			$c
+		)
+	);
+}
+
+sub unload_chunk {
+	$_[0]->send(
+		$::pf->build(
+			0x32,
+			$_[1],
+			$_[2],
+			0
+		)
+	);
+}
+
 sub kick {
 	my ($self,$msg,$automated) = @_;
 
-	$::logger->log('red',($self->{'runlevel'} >= 1 ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
+	$::log->red(($self->{'runlevel'} >= 1 ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
 
 	$self->send(
 		$::pf->build(
@@ -96,6 +156,9 @@ sub kick {
 
 sub teleport {
 	my ($self,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
+
+	$self->update_chunks($x,$z);
+
 	$self->{'entity'}->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
 }
 

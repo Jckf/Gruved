@@ -1,5 +1,5 @@
 #!/dev/null
-package Minecraft::Server::PacketFactory;
+package PacketFactory;
 
 use strict;
 use warnings;

@@ -1,5 +1,5 @@
 #!/dev/null
-package Minecraft::Server::EntityNamed;
+package Entity;
 
 use strict;
 use warnings;

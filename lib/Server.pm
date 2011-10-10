@@ -1,5 +1,5 @@
 #!/dev/null
-package Minecraft::Server;
+package Server;
 
 use strict;
 use warnings;
@@ -10,6 +10,7 @@ sub new {
 
 	$self->{'description'} = 'A Minecraft server';
 	$self->{'max_players'} = 32;
+	$self->{'view_distance'} = 10;
 
 	$self->{'time'} = 0;
 
@@ -70,7 +71,7 @@ sub remove_entity {
 sub broadcast {
 	my ($self,$msg) = @_;
 
-	$::logger->log('white',$msg);
+	$::log->white($msg);
 
 	foreach my $p ($self->get_players()) {
 		$p->message($msg);

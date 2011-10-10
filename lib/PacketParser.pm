@@ -1,10 +1,10 @@
 #!/dev/null
-package Minecraft::Server::PacketParser;
+package PacketParser;
 
 use strict;
 use warnings;
-use Events;
 use Encode;
+use Events;
 
 my %data_types = %{{
 	'bool' => sub {

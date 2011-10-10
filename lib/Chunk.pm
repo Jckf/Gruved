@@ -1,26 +1,28 @@
 #!/dev/null
-package Minecraft::Server::Chunk;
+package Chunk;
 
 use strict;
 use warnings;
-use Minecraft::Server::Block;
 use Compress::Zlib;
+use Block;
 
 sub new {
 	my ($class) = @_;
 	my $self = {};
 
+	$self->{'modified'} = 0;
 	$self->{'blocks'} = [];
 
 	bless($self,$class);
 }
 
 sub set_block {
+	$_[0]->{'modified'} = 1;
 	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] = $_[4];
 }
 
 sub get_block {
-	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || Minecraft::Server::Block->new();
+	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || Block->new();
 }
 
 sub deflate {
@@ -29,7 +31,7 @@ sub deflate {
 	my ($types,$data,$light,$skylight) = ('','','','');
 
 	foreach my $i (0 .. (16 * 16 * 128) - 1) {
-		my $block = $self->{'blocks'}->[$i] || Minecraft::Server::Block->new();
+		my $block = $self->{'blocks'}->[$i] || Block->new();
 
 		$types .= chr($block->{'type'});
 		$data .= chr($block->{'data'});

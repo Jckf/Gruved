@@ -22,25 +22,25 @@ sub set_block {
 }
 
 sub get_block {
-	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || Block->new();
+	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || { 'type' => 0 };#Block->new();
 }
 
 sub deflate {
 	my ($self) = @_;
 
-	my ($types,$data,$light,$skylight) = ('','','','');
+	my $blocks = 16 * 16 * 128;
+	my $types = chr(0) x $blocks;
+	my $data = '';#chr(0) x ($blocks / 2);
+	my $light = '';#chr(0) x $blocks;
 
-	foreach my $i (0 .. (16 * 16 * 128) - 1) {
-		my $block = $self->{'blocks'}->[$i] || Block->new();
-
-		$types .= chr($block->{'type'});
-		$data .= chr($block->{'data'});
-		$light .= substr(unpack('H*',chr($block->{'light'})),1);
-		$skylight .= substr(unpack('H*',chr($block->{'skylight'})),1);
+	foreach my $b (keys @{$self->{'blocks'}}) {
+		if (defined $self->{'blocks'}->[$b]) {
+			substr($types,$b,1,chr($self->{'blocks'}->[$b]->{'type'}));
+		}
 	}
 
 	my $z = deflateInit();
-	return $z->deflate($types . $data . pack('H*','0x' . $light) . pack('H*','0x' . $skylight)) . $z->flush();
+	return $z->deflate($types . $data . $light) . $z->flush();
 }
 
 1;

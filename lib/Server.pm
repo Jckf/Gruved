@@ -1,4 +1,7 @@
 #!/dev/null
+
+# TODO: Move players and entities to World.
+
 package Server;
 
 use strict;
@@ -10,15 +13,12 @@ sub new {
 
 	$self->{'description'} = 'A Minecraft server';
 	$self->{'max_players'} = 32;
-	$self->{'view_distance'} = 10;
+	$self->{'view_distance'} = 4;
 
 	$self->{'time'} = 0;
 
 	$self->{'players'} = [];
 	$self->{'entities'} = [];
-
-	$self->{'packets'} = 0;
-	$self->{'pps'} = 0;
 
 	bless($self,$class);
 }
@@ -45,6 +45,7 @@ sub get_players {
 			push(@result,$p);
 		}
 	}
+
 	return @result;
 }
 
@@ -53,25 +54,27 @@ sub remove_player {
 
 	if (ref($ref) eq 'IO::Socket::INET') {
 		$self->remove_entity($self->{'players'}->[fileno($ref)]->{'entity'}->{'id'}) if defined $self->{'players'}->[fileno($ref)]->{'entity'};
-		splice(@{$self->{'players'}},fileno($ref),1);
+		$self->{'players'}->[fileno($ref)] = undef;
 	}
 }
 
 sub add_entity {
 	my ($self,$ent) = @_;
 
-	$ent->{'id'} = length(@{$self->{'entities'}});
+	my $test = @{$self->{'entities'}};
+	$test++ while (!$test || defined($self->{'entities'}->[$test]));
+
+	$ent->{'id'} = $test;
+
 	$self->{'entities'}->[$ent->{'id'}] = $ent;
 }
 
 sub remove_entity {
-	splice(@{$_[0]->{'entities'}},$_[1],1);
+	$_[0]->{'entities'}->[$_[1]] = undef;
 }
 
 sub broadcast {
 	my ($self,$msg) = @_;
-
-	$::log->white($msg);
 
 	foreach my $p ($self->get_players()) {
 		$p->message($msg);

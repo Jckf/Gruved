@@ -91,6 +91,10 @@ sub new {
 	bless($self,$object);
 }
 
+sub bind {
+	$_[0]->{'events'}->bind($_[1],$_[2]);
+}
+
 sub parse {
 	my ($self,$socket) = @_;
 
@@ -111,9 +115,10 @@ sub parse {
 		#	print "\t" . join("\n\t",@data) . "\n\n";
 		#}
 
-		my @filters = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
-		foreach my $filter (@filters) {
-			return 0 if !$filter;
+		my $e = $self->{'events'}->trigger('filter',$socket,$packet_id,@data);
+		if ($e->{'cancelled'}) {
+			$self->{'error'} = 'Packet 0x' . unpack('H*',chr($packet_id)) . ' was denied by filter.';
+			return -1;
 		}
 
 		$self->{'events'}->trigger($packet_id,$socket,@data);
@@ -121,9 +126,9 @@ sub parse {
 		return 1;
 	}
 
-	$self->{'error'} = 'Invalid packet ' . $packet_id . '.';
+	$self->{'error'} = 'Invalid packet 0x' . unpack('H*',chr($packet_id)) . '.';
 
-	return 0;
+	return -1;
 }
 
 1;

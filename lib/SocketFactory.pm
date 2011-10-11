@@ -21,6 +21,10 @@ sub new {
 	bless($self,$class);
 }
 
+sub bind {
+	$_[0]->{'events'}->bind($_[1],$_[2]);
+}
+
 sub run {
 	my ($self) = @_;
 
@@ -52,11 +56,7 @@ sub run {
 				$self->{'select'}->add($client);
 				$self->{'events'}->trigger('accept',$client);
 			} else {
-				foreach my $result ($self->{'events'}->trigger('can_read',$socket)) {
-					if (!$result) {
-						next;
-					}
-				}
+				$self->{'events'}->trigger('can_read',$socket)
 			}
 		}
 		$self->{'events'}->trigger('tick',$loops);

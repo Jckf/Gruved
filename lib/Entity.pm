@@ -37,11 +37,21 @@ sub teleport {
 
 	$self->{'on_ground'} = $on_ground if defined $on_ground;
 
-	$self->{'chunk_x'} = int($self->{'x'} / 16);
-	$self->{'chunk_z'} = int($self->{'z'} / 16);
-
-	$self->{'chunk_x'}-- if $self->{'x'} < 0;
-	$self->{'chunk_y'}-- if $self->{'y'} < 0;
+	foreach my $p ($::srv->get_players()) {
+		if ($self->{'id'} != $p->{'entity'}->{'id'}) {
+			$p->send(
+				$::pf->build(
+					0x22,
+					$self->{'id'},
+					$self->{'x'} * 32,
+					$self->{'y'} * 32,
+					$self->{'z'} * 32,
+					($self->{'yaw'} % 360) / 360 * 255,
+					($self->{'pitch'} % 360) / 360 * 255
+				)
+			);
+		}
+	}
 }
 
 1;

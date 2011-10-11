@@ -19,12 +19,10 @@ sub trigger {
 	my ($self,$event,@data) = @_;
 
 	if (defined $self->{'events'}->{$event}) {
-		my @returns;
-		push(@returns,&{$_}(@data)) for @{$self->{'events'}->{$event}};
-		return @returns;
+		my $e = { 'cancelled' => 0 };
+		&{$_}($e,@data) for reverse @{$self->{'events'}->{$event}};
+		return $e;
 	}
-
-	return 0;
 }
 
 1;

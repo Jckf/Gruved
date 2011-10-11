@@ -116,9 +116,9 @@ sub load_chunk {
 		),
 		$::pf->build(
 			0x33,
-			$x,
+			$x * 16,
 			0,
-			$z,
+			$z * 16,
 			15,
 			127,
 			15,
@@ -157,9 +157,27 @@ sub kick {
 sub teleport {
 	my ($self,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
 
-	$self->update_chunks($x,$z);
+	$self->update_chunks($x,$z) if (defined($x) && defined($z));
 
 	$self->{'entity'}->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
+}
+
+sub load_entity_named {
+	my ($self,$e) = @_;
+
+	$self->send(
+		$::pf->build(
+			0x14,
+			$e->{'id'},
+			$e->{'player'}->{'username'},
+			$e->{'x'} * 32,
+			$e->{'y'} * 32,
+			$e->{'z'} * 32,
+			($e->{'yaw'} % 360) / 360 * 255,
+			($e->{'pitch'} % 360) / 360 * 255,
+			0
+		)
+	);
 }
 
 1;

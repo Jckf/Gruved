@@ -29,15 +29,27 @@ sub deflate {
 	my ($self) = @_;
 
 	my $blocks = 16 * 16 * 128;
-	my $types = chr(0) x $blocks;
-	my $data = '';#chr(0) x ($blocks / 2);
-	my $light = '';#chr(0) x $blocks;
+	my $types = '';
+	my $data = "\0" x ($blocks / 2);
+	my $light = chr(0xFF) x $blocks;
 
-	foreach my $b (keys @{$self->{'blocks'}}) {
-		if (defined $self->{'blocks'}->[$b]) {
-			substr($types,$b,1,chr($self->{'blocks'}->[$b]->{'type'}));
-		}
-	}
+	# Tybalt.
+	$types = join('',map { defined($_) ? chr($_->{'type'}) : "\0" } values @{$self->{'blocks'}});
+
+	# Jkeats.
+	#my $offset = 0;
+	#while ($offset < $blocks) {
+	#	vec($types,$offset,8) = defined($self->{'blocks'}->[$offset]) ? $self->{'blocks'}->[$offset]->{'type'} : 0;
+	#	$offset++
+	#}
+
+	# Jckf.
+	#$types = chr(0) x $blocks;
+	#foreach my $b (keys @{$self->{'blocks'}}) {
+	#	if (defined $self->{'blocks'}->[$b]) {
+	#		substr($types,$b,1,chr($self->{'blocks'}->[$b]->{'type'}));
+	#	}
+	#}
 
 	my $z = deflateInit();
 	return $z->deflate($types . $data . $light) . $z->flush();

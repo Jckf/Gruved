@@ -22,7 +22,7 @@ sub set_block {
 }
 
 sub get_block {
-	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || { 'type' => 0 };#Block->new();
+	$_[0]->{'blocks'}->[$_[2] + ($_[1] * 128) + ($_[3] * 128 * 16)] || [0];
 }
 
 sub deflate {
@@ -33,25 +33,9 @@ sub deflate {
 	my $data = "\0" x ($blocks / 2);
 	my $light = chr(0xFF) x $blocks;
 
-	# Tybalt.
-	$types = join('',map { defined($_) ? chr($_->{'type'}) : "\0" } values @{$self->{'blocks'}});
+	$types = pack 'C*', map { $_ ? $_->[0] : 0 } @{$self->{blocks}};
 
-	# Jkeats.
-	#my $offset = 0;
-	#while ($offset < $blocks) {
-	#	vec($types,$offset,8) = defined($self->{'blocks'}->[$offset]) ? $self->{'blocks'}->[$offset]->{'type'} : 0;
-	#	$offset++
-	#}
-
-	# Jckf.
-	#$types = chr(0) x $blocks;
-	#foreach my $b (keys @{$self->{'blocks'}}) {
-	#	if (defined $self->{'blocks'}->[$b]) {
-	#		substr($types,$b,1,chr($self->{'blocks'}->[$b]->{'type'}));
-	#	}
-	#}
-
-	my $z = deflateInit();
+	my $z = deflateInit(-Level => Z_BEST_SPEED);
 	return $z->deflate($types . $data . $light) . $z->flush();
 }
 

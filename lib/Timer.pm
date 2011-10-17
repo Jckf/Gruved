@@ -24,12 +24,7 @@ sub tick {
 
 	if (time() - $self->{'previous'} >= $self->{'interval'}) {
 		$self->{'previous'} = time();
-
-		my @results;
-		foreach my $callback (@{$self->{'callbacks'}}) {
-			push(@results,&{$callback}());
-		}
-		return @results;
+		&{$_}() for @{$self->{'callbacks'}}
 	}
 }
 

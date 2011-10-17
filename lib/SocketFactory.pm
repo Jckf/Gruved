@@ -3,6 +3,7 @@ package SocketFactory;
 
 use strict;
 use warnings;
+use Time::HiRes 'sleep';
 use IO::Select;
 use IO::Socket::INET;
 use Events;
@@ -39,18 +40,8 @@ sub run {
 	$self->{'select'}->add($self->{'listener'});
 
 	while ($self->{'listener'}) {
-		my $loops = 0;
-		foreach my $socket ($self->{'select'}->has_exception(0)) {
-			$loops++;
-			if (fileno($socket) == fileno($self->{'listener'})) {
-				undef $self->{'listener'};
-			} else {
-				$self->{'events'}->trigger('has_exception',$socket);
-				$self->close($socket);
-			}
-		}
-		foreach my $socket ($self->{'select'}->can_read(0)) {
-			$loops++;
+		my @sockets = $self->{'select'}->can_read(0) or sleep 0.001;
+		foreach my $socket (@sockets) {
 			if (fileno($socket) == fileno($self->{'listener'})) {
 				my $client = $socket->accept();
 				$self->{'select'}->add($client);
@@ -59,7 +50,7 @@ sub run {
 				$self->{'events'}->trigger('can_read',$socket)
 			}
 		}
-		$self->{'events'}->trigger('tick',$loops);
+		$self->{'events'}->trigger('tick');
 	}
 
 	return 0;

@@ -13,7 +13,7 @@ sub new {
 
 	$self->{'description'} = 'A Minecraft server';
 	$self->{'max_players'} = 32;
-	$self->{'view_distance'} = 10;
+	$self->{'view_distance'} = 6;
 
 	$self->{'time'} = 0;
 

@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 #use Devel::SimpleTrace;
-use Time::HiRes 'sleep';
 use lib 'lib';
 use Logger;
 use Timer;
@@ -68,7 +67,7 @@ $log->magenta('Loading worlds...');
 
 # TODO: Automate this based on data on disk.
 my %worlds;
-$worlds{'world'} = new World();
+$worlds{'world'} = World->new();
 
 $log->green('Waiting for connections...');
 
@@ -79,7 +78,6 @@ $log->red('Server stopped!');
 exit;
 
 sub sf_tick {
-	sleep 0.001 if !$_[0];
 	$t1s->tick();
 }
 

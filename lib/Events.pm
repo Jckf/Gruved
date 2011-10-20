@@ -11,8 +11,7 @@ sub new {
 }
 
 sub bind {
-	my ($self,$event,$handler) = @_;
-	return push(@{$self->{'events'}->{$event}},$handler) - 1;
+	push(@{$_[0]->{'events'}->{$_[1]}},$_[2]) - 1;
 }
 
 sub trigger {

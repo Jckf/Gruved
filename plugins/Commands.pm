@@ -3,15 +3,16 @@ package Commands;
 
 use strict;
 use warnings;
-use Events;
+use Eventss;
+use Packet;
 
 sub new {
 	my ($class) = @_;
 	my $self = {};
 
-	$self->{'events'} = Events->new();
+	$self->{'events'} = Eventss->new();
 
-	$::pp->bind(0x03,sub {
+	$::pp->bind(Packet::CHAT,sub {
 		my ($e,$s,$m) = @_;
 		my $p = $::srv->get_player($s);
 

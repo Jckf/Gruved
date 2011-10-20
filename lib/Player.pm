@@ -3,6 +3,13 @@ package Player;
 
 use strict;
 use warnings;
+use Packet;
+
+use constant {
+	NEW   => 0,
+	HELLO => 1,
+	LOGIN => 2
+};
 
 sub new {
 	my ($class,%options) = @_;
@@ -36,7 +43,7 @@ sub ping {
 
 	$self->send(
 		$::pf->build(
-			0x00,
+			Packet::PING,
 			$id
 		)
 	);
@@ -47,7 +54,7 @@ sub message {
 
 	$self->send(
 		$::pf->build(
-			0x03,
+			Packet::CHAT,
 			$msg
 		)
 	);
@@ -56,7 +63,7 @@ sub message {
 sub set_time {
 	$_[0]->send(
 		$::pf->build(
-			0x04,
+			Packet::TIME,
 			$_[1]
 		)
 	);
@@ -69,7 +76,7 @@ sub update_position {
 
 	$self->send(
 		$::pf->build(
-			0x0D,
+			Packet::POSLOOK,
 			$self->{'entity'}->{'x'},
 			$self->{'entity'}->{'y2'},
 			$self->{'entity'}->{'y'},
@@ -109,13 +116,13 @@ sub load_chunk {
 
 	$self->send(
 		$::pf->build(
-			0x32,
+			Packet::CHUNK,
 			$x,
 			$z,
 			1
 		),
 		$::pf->build(
-			0x33,
+			Packet::CHUNKD,
 			$x * 16,
 			0,
 			$z * 16,
@@ -131,7 +138,7 @@ sub load_chunk {
 sub unload_chunk {
 	$_[0]->send(
 		$::pf->build(
-			0x32,
+			Packet::CHUNK,
 			$_[1],
 			$_[2],
 			0
@@ -146,7 +153,7 @@ sub kick {
 
 	$self->send(
 		$::pf->build(
-			0xFF,
+			Packet::QUIT,
 			$msg
 		)
 	);
@@ -167,7 +174,7 @@ sub load_entity_named {
 
 	$self->send(
 		$::pf->build(
-			0x14,
+			Packet::SPAWNN,
 			$e->{'id'},
 			$e->{'player'}->{'username'},
 			$e->{'x'} * 32,

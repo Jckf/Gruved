@@ -1,14 +1,15 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-#use Devel::SimpleTrace;
+use Devel::SimpleTrace;
 use lib 'lib';
 use Logger;
 use Timer;
 use Server;
 use SocketFactory;
-use PacketParser;
-use PacketFactory;
+use Packet;
+use Packet::Parser;
+use Packet::Factory;
 use World;
 use Chunk;
 use Player;
@@ -25,33 +26,33 @@ $log->magenta('Initializing core objects...');
 
 our $srv = Server->new();
 our $sf  = SocketFactory->new();
-our $pp  = PacketParser ->new();
-our $pf  = PacketFactory->new();
+our $pp  = Packet::Parser ->new();
+our $pf  = Packet::Factory->new();
 
 my $t1s  = Timer->new(1);
 
 $log->magenta('Binding to core events...');
 
-$sf->bind('tick',\&sf_tick);
+$sf->bind(SocketFactory::TICK,\&sf_tick);
 
 $t1s->bind(\&timer_time);
 
-$sf->bind('accept',       \&sf_accept);
-$sf->bind('can_read',     \&sf_can_read);
-$sf->bind('has_exception',\&sf_has_exception);
-$sf->bind('close',        \&sf_close);
+$sf->bind(SocketFactory::ACCEPT,   \&sf_accept);
+$sf->bind(SocketFactory::READ,     \&sf_read);
+$sf->bind(SocketFactory::EXCEPTION,\&sf_exception);
+$sf->bind(SocketFactory::CLOSE,    \&sf_close);
 
-$pp->bind('filter',\&pp_filter);
+$pp->bind(Packet::Parser::FILTER,\&pp_filter);
 
-$pp->bind(0x01,\&pp_0x01);
-$pp->bind(0x02,\&pp_0x02);
-$pp->bind(0x03,\&pp_0x03);
-$pp->bind(0x0A,\&pp_0x0A);
-$pp->bind(0x0B,\&pp_0x0B);
-$pp->bind(0x0C,\&pp_0x0C);
-$pp->bind(0x0D,\&pp_0x0D);
-$pp->bind(0xFE,\&pp_0xFE);
-$pp->bind(0xFF,\&pp_0xFF);
+$pp->bind(Packet::LOGIN   ,\&pp_0x01);
+$pp->bind(Packet::HELLO   ,\&pp_0x02);
+$pp->bind(Packet::CHAT    ,\&pp_0x03);
+$pp->bind(Packet::GROUND  ,\&pp_0x0A);
+$pp->bind(Packet::POSITION,\&pp_0x0B);
+$pp->bind(Packet::LOOK    ,\&pp_0x0C);
+$pp->bind(Packet::POSLOOK ,\&pp_0x0D);
+$pp->bind(Packet::STATUS  ,\&pp_0xFE);
+$pp->bind(Packet::QUIT    ,\&pp_0xFF);
 
 $log->magenta('Loading plugins...');
 
@@ -99,7 +100,7 @@ sub sf_accept {
 	);
 }
 
-sub sf_can_read {
+sub sf_read {
 	my ($e,$s) = @_;
 	my $p = $srv->get_player($s);
 
@@ -122,7 +123,7 @@ sub sf_can_read {
 	}
 }
 
-sub sf_has_exception {
+sub sf_exception {
 	$log->red('Socket x.x.x.x:x has an exception!');
 	$sf->close($_[1]);
 }
@@ -137,17 +138,17 @@ sub sf_close {
 		foreach my $o ($srv->get_players()) {
 			$o->send(
 				$pf->build(
-					0xC9,
+					Packet::LIST,
 					$p->{'username'},
 					0,
 					0
 				),
 				$pf->build(
-					0x1D,
+					Packet::REMOVE,
 					$p->{'entity'}->{'id'}
 				),
 				$pf->build(
-					0x03,
+					Packet::CHAT,
 					$p->{'displayname'} . '§e left the game.'
 				)
 			);
@@ -161,15 +162,15 @@ sub pp_filter {
 	my ($e,$s,$id) = @_;
 	my $p = $srv->get_player($s);
 
-	if ($p->{'runlevel'} == 0) {
-		if ($id == 0x02 || $id == 0xFE) {
+	if ($p->{'runlevel'} == Player::NEW) {
+		if ($id == Packet::HELLO || $id == Packet::STATUS) {
 			return;
 		}
-	} elsif ($p->{'runlevel'} == 1) {
-		if ($id == 0x01) {
+	} elsif ($p->{'runlevel'} == Player::HELLO) {
+		if ($id == Packet::LOGIN) {
 			return;
 		}
-	} elsif ($p->{'runlevel'} == 2) {
+	} elsif ($p->{'runlevel'} == Player::LOGIN) {
 		return;
 	}
 
@@ -216,7 +217,7 @@ sub pp_0x01 {
 	foreach my $o ($srv->get_players()) {
 		$o->send(
 			$pf->build(
-				0xC9,
+				Packet::LIST,
 				$p->{'displayname'} . '§f',
 				1,
 				$p->{'latency'}
@@ -224,7 +225,7 @@ sub pp_0x01 {
 		);
 		$p->send(
 			$pf->build(
-				0xC9,
+				Packet::LIST,
 				$o->{'displayname'} . '§f',
 				1,
 				$o->{'latency'}
@@ -243,11 +244,11 @@ sub pp_0x02 {
 
 	my $p = $srv->get_player($s);
 	$p->{'username'} = $u;
-	$p->{'displayname'} = ($u eq 'Jckf' ? '§cJckf' : $u);
+	$p->{'displayname'} = ($u eq 'Jckf' ? '§cJckf' : $u); # Yes, I am cooler than you ;)
 
 	$p->send(
 		$pf->build(
-			0x02,
+			Packet::HELLO,
 			'-'
 		)
 	);

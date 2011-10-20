@@ -6,6 +6,7 @@ package Server;
 
 use strict;
 use warnings;
+use Player;
 
 sub new {
 	my ($class) = @_;
@@ -37,7 +38,7 @@ sub get_player {
 
 sub get_players {
 	my ($self,$runlevel) = @_;
-	$runlevel = 2 if !defined $runlevel;
+	$runlevel = Player::LOGIN if !defined $runlevel;
 
 	my @result;
 	foreach my $p (@{$self->{'players'}}) {

@@ -8,6 +8,14 @@ use IO::Select;
 use IO::Socket::INET;
 use Events;
 
+use constant {
+	TICK      => 0,
+	ACCEPT    => 1,
+	READ      => 2,
+	EXCEPTION => 3,
+	CLOSE     => 4
+};
+
 sub new {
 	my ($class,%options) = @_;
 	my $self = {};
@@ -45,12 +53,12 @@ sub run {
 			if (fileno($socket) == fileno($self->{'listener'})) {
 				my $client = $socket->accept();
 				$self->{'select'}->add($client);
-				$self->{'events'}->trigger('accept',$client);
+				$self->{'events'}->trigger(ACCEPT,$client);
 			} else {
-				$self->{'events'}->trigger('can_read',$socket)
+				$self->{'events'}->trigger(READ,$socket)
 			}
 		}
-		$self->{'events'}->trigger('tick');
+		$self->{'events'}->trigger(TICK);
 	}
 
 	return 0;
@@ -58,7 +66,7 @@ sub run {
 
 sub close {
 	my ($self,$socket) = @_;
-	$self->{'events'}->trigger('close',$socket);
+	$self->{'events'}->trigger(CLOSE,$socket);
 	$self->{'select'}->remove($socket);
 	$socket->close();
 	return 1;

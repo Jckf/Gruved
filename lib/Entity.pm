@@ -41,7 +41,7 @@ sub teleport {
 		if ($self->{'id'} != $p->{'entity'}->{'id'}) {
 			$p->send(
 				$::pf->build(
-					0x22,
+					Packet::TELEPORT,
 					$self->{'id'},
 					$self->{'x'} * 32,
 					$self->{'y'} * 32,

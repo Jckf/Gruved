@@ -44,15 +44,15 @@ $sf->bind(SocketFactory::CLOSE,    \&sf_close);
 
 $pp->bind(Packet::Parser::FILTER,\&pp_filter);
 
-$pp->bind(Packet::LOGIN   ,\&pp_0x01);
-$pp->bind(Packet::HELLO   ,\&pp_0x02);
-$pp->bind(Packet::CHAT    ,\&pp_0x03);
-$pp->bind(Packet::GROUND  ,\&pp_0x0A);
-$pp->bind(Packet::POSITION,\&pp_0x0B);
-$pp->bind(Packet::LOOK    ,\&pp_0x0C);
-$pp->bind(Packet::POSLOOK ,\&pp_0x0D);
-$pp->bind(Packet::STATUS  ,\&pp_0xFE);
-$pp->bind(Packet::QUIT    ,\&pp_0xFF);
+$pp->bind(Packet::LOGIN   ,\&pp_login);
+$pp->bind(Packet::HELLO   ,\&pp_hello);
+$pp->bind(Packet::CHAT    ,\&pp_chat);
+$pp->bind(Packet::GROUND  ,\&pp_ground);
+$pp->bind(Packet::POSITION,\&pp_position);
+$pp->bind(Packet::LOOK    ,\&pp_look);
+$pp->bind(Packet::POSLOOK ,\&pp_poslook);
+$pp->bind(Packet::STATUS  ,\&pp_status);
+$pp->bind(Packet::QUIT    ,\&pp_quit);
 
 $log->magenta('Loading plugins...');
 
@@ -91,7 +91,7 @@ sub timer_time {
 }
 
 sub sf_accept {
-	$log->green('New connection from x.x.x.x.');
+	$log->green('New connection from ' . $_[1]->peerhost() . '/' . $_[1]->sockhost() . '.');
 
 	$srv->add_player(
 		Player->new(
@@ -177,7 +177,7 @@ sub pp_filter {
 	$e->{'cancelled'} = 1;
 }
 
-sub pp_0x01 {
+sub pp_login {
 	my ($e,$s,$proto,$un) = @_;
 
 	my $p = $srv->get_player($s);
@@ -194,23 +194,36 @@ sub pp_0x01 {
 
 	$p->send(
 		$pf->build(
-			0x01,
+			Packet::LOGIN,
 			$p->{'entity'}->{'id'},
 			'',
-			0, # Map seed.
+			$p->{'entity'}->{'world'}->{'seed'},
 			$p->{'gamemode'},
 			$p->{'dimension'},
 			$p->{'difficulty'},
-			128, # World height.
+			$p->{'entity'}->{'world'}->{'height'},
 			$srv->{'max_players'}
 		)
 	);
 
 	$p->set_time($srv->{'time'});
 
+	$p->update_chunks();
+
+	$p->send(
+		$::pf->build(
+			Packet::SLOT,
+			0,
+			36,
+			1,
+			64,
+			1
+		)
+	);
+
 	$p->update_position();
 
-	$p->{'runlevel'} = 2;
+	$p->{'runlevel'} = Player::LOGIN;
 
 	$srv->broadcast($p->{'displayname'} . ' §ejoined the game.');
 
@@ -239,7 +252,7 @@ sub pp_0x01 {
 	}
 }
 
-sub pp_0x02 {
+sub pp_hello {
 	my ($e,$s,$u) = @_;
 
 	my $p = $srv->get_player($s);
@@ -253,38 +266,45 @@ sub pp_0x02 {
 		)
 	);
 
-	$p->{'runlevel'} = 1;
+	$p->{'runlevel'} = Player::HELLO;
 }
 
-sub pp_0x03 {
+sub pp_chat {
 	if (!$_[0]->{'cancelled'}) {
 		$srv->broadcast($srv->get_player($_[1])->{'displayname'} . '§f: ' . $_[2]);
 	}
 }
 
-sub pp_0x0A {
+sub pp_ground {
 	$srv->get_player($_[1])->{'on_ground'} = $_[2];
 }
 
-sub pp_0x0B {
+sub pp_position {
 	my ($e,$s,$x,$y,$y2,$z,$on_ground) = @_;
-	pp_0x0D($e,$s,$x,$y,$y2,$z,undef,undef,$on_ground);
+	pp_poslook($e,$s,$x,$y,$y2,$z,undef,undef,$on_ground);
 }
 
-sub pp_0x0C {
+sub pp_look {
 	my ($e,$s,$yaw,$pitch,$on_ground) = @_;
-	pp_0x0D($e,$s,undef,undef,undef,undef,$yaw,$pitch,$on_ground);
+	pp_poslook($e,$s,undef,undef,undef,undef,$yaw,$pitch,$on_ground);
 }
 
-sub pp_0x0D {
+sub pp_poslook {
 	my ($e,$s,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
+	my $p = $srv->get_player($s);
 
-	# TODO: Check if the player is inside an unloaded chunk or inside a block. If he is, don't allow movement.
+	if (defined $x && defined $y && defined $z) {
+		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
+		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
+			$p->update_position();
+			return;
+		}
+	}
 
-	$srv->get_player($s)->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
+	$p->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
 }
 
-sub pp_0xFE {
+sub pp_status {
 	$srv->get_player($_[1])->kick(
 		$srv->{'description'} . '§' .
 		$srv->get_players() . '§' .
@@ -293,6 +313,6 @@ sub pp_0xFE {
 	);
 }
 
-sub pp_0xFF {
+sub pp_quit {
 	$sf->close($_[1]);
 }

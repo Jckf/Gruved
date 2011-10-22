@@ -72,8 +72,6 @@ sub set_time {
 sub update_position {
 	my ($self) = @_;
 
-	$self->update_chunks();
-
 	$self->send(
 		$::pf->build(
 			Packet::POSLOOK,

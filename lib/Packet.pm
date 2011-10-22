@@ -28,6 +28,7 @@ use constant {
 	CHUNKD   => 0x33,
 	CLOSE    => 0x65,
 	CLICK    => 0x66,
+	SLOT     => 0x67,
 	LIST     => 0xC9,
 	STATUS   => 0xFE,
 	QUIT     => 0xFF,

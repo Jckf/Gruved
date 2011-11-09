@@ -74,13 +74,11 @@ sub update_position {
 
 	$self->send(
 		$::pf->build(
-			Packet::POSLOOK,
+			Packet::POSITION,
 			$self->{'entity'}->{'x'},
 			$self->{'entity'}->{'y2'},
 			$self->{'entity'}->{'y'},
 			$self->{'entity'}->{'z'},
-			$self->{'entity'}->{'yaw'},
-			$self->{'entity'}->{'pitch'},
 			$self->{'entity'}->{'on_ground'}
 		)
 	);
@@ -161,7 +159,7 @@ sub kick {
 
 sub teleport {
 	my ($self,$x,$y,$y2,$z,$yaw,$pitch,$on_ground) = @_;
-
+	
 	$self->update_chunks($x,$z) if (defined($x) && defined($z));
 
 	$self->{'entity'}->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);

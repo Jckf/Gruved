@@ -7,6 +7,23 @@ use Data::Dumper;
 use Encode;
 use Events;
 use Packet;
+our $IS_64BIT;
+BEGIN {
+    local $@;
+    eval {no strict;no warnings;pack 'Q', 42;};
+    if ($@) {
+        $IS_64BIT=0;
+        eval {
+            require Math::Int64;
+            Math::Int64->import(qw(net_to_int64 int64_to_number));
+        };
+        if ($@) {
+            die "GRUVED requires a 64-bit build of perl, or Math::Int64.\n";
+        }
+    }else{
+        $IS_64BIT=1;
+    }
+}
 
 use constant {
 	FILTER => 0
@@ -18,7 +35,11 @@ $types[Packet::BOOL    ] = sub { sysread($_[0],my $data,1); ord($data) ? 1 : 0; 
 $types[Packet::BYTE    ] = sub { sysread($_[0],my $data,1); ord($data);         };
 $types[Packet::INT     ] = sub { sysread($_[0],my $data,4); unpack('i>',$data); };
 $types[Packet::SHORT   ] = sub { sysread($_[0],my $data,2); unpack('s>',$data); };
-$types[Packet::LONG    ] = sub { sysread($_[0],my $data,8); unpack('q>',$data); };
+if ($IS_64BIT) {
+	$types[Packet::LONG    ] = sub { sysread($_[0],my $data,8); unpack('q>',$data); };
+}else{
+    $types[Packet::LONG    ] = sub { sysread($_[0],my $data,8); int64_to_number(net_to_int64($data))};
+}
 $types[Packet::FLOAT   ] = sub { sysread($_[0],my $data,4); unpack('f>',$data); };
 $types[Packet::DOUBLE  ] = sub { sysread($_[0],my $data,8); unpack('d>',$data); };
 $types[Packet::STRING16] = sub {
@@ -47,7 +68,10 @@ $types[Packet::STRING16] = sub {
 @{$structures[Packet::STATUS  ]} = ();
 @{$structures[Packet::QUIT    ]} = ();
 
-$dynamic[Packet::PLACE] = sub {
+@{$structures[0x6B]} = (Packet::SHORT,Packet::SHORT,Packet::SHORT,Packet::SHORT);
+@{$structures[0x66]} = (Packet::BYTE,Packet::SHORT,Packet::BYTE,Packet::SHORT,Packet::BOOL,Packet::SHORT);
+
+$dynamic[0x66] = $dynamic[Packet::PLACE] = sub {
 	if ($_[5] >= 0) {
 		push(@_,&{$types[Packet::BYTE]}($_[0]));
 		push(@_,&{$types[Packet::SHORT]}($_[0]));

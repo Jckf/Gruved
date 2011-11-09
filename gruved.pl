@@ -31,7 +31,7 @@ our $sf  = SocketFactory->new();
 our $pp  = Packet::Parser ->new();
 our $pf  = Packet::Factory->new();
 
-my $t1s  = Timer->new(0.5);
+my $t1s  = Timer->new(1);
 
 $log->magenta('Binding to core events...');
 
@@ -86,11 +86,11 @@ sub sf_tick {
 }
 
 sub timer_time {
-	$srv->{'time'}+=10;
+	$srv->{'time'}++;
 	#print "Time: $srv->{'time'}         \r";
-	if ($srv->{'time'} % 20 == 0) {
+	if (int($srv->{'time'}) == $srv->{'time'}) {
 		foreach my $p ($srv->get_players()) {
-			$p->set_time($srv->{'time'} % 24000);
+			$p->set_time(($srv->{'time'} * 20) % 24000);
 		}
 	}
 }

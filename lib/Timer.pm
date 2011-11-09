@@ -1,5 +1,6 @@
 #!/dev/null
 package Timer;
+
 use Time::HiRes qw(time);
 use strict;
 use warnings;

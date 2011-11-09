@@ -51,9 +51,9 @@ $pp->bind(Packet::GROUND  ,\&pp_ground);
 $pp->bind(Packet::POSITION,\&pp_position);
 $pp->bind(Packet::LOOK    ,\&pp_look);
 $pp->bind(Packet::POSLOOK ,\&pp_poslook);
+$pp->bind(Packet::DIG     ,\&pp_dig);
 $pp->bind(Packet::STATUS  ,\&pp_status);
 $pp->bind(Packet::QUIT    ,\&pp_quit);
-$pp->bind(Packet::DIG     ,\&pp_dig);
 
 $log->magenta('Loading plugins...');
 
@@ -295,16 +295,6 @@ sub pp_poslook {
 		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
 		$x-- if $x < 0; $z-- if $z < 0;
 		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
-			$p->send(
-				$pf->build(
-					Packet::BLOCK,
-					$x,
-					$y,
-					$z,
-					1,
-					0
-				)
-			);
 			$p->update_position();
 			return;
 		}

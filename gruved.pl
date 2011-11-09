@@ -295,6 +295,16 @@ sub pp_poslook {
 		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
 		$x-- if $x < 0; $z-- if $z < 0;
 		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
+			$p->send(
+				$pf->build(
+					Packet::BLOCK,
+					$x,
+					$y,
+					$z,
+					1,
+					0
+				)
+			);
 			$p->update_position();
 			return;
 		}
@@ -316,6 +326,7 @@ sub pp_dig {
 
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
+	#       Chunks with altered blocks even have a flag saying they have been changed, so it's pretty much ready for it.
 	foreach my $o ($srv->get_players()) {
 		$o->send(
 			$pf->build(

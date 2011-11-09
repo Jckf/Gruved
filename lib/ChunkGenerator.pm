@@ -3,6 +3,7 @@ package ChunkGenerator;
 
 use strict;
 use warnings;
+use Storable 'dclone';
 use Chunk;
 use Block;
 
@@ -35,7 +36,7 @@ sub generate {
 		$_[0]->{'cache'} = $chunk;
 	}
 
-	return $_[0]->{'cache'};
+	return dclone($_[0]->{'cache'});
 }
 
 1;

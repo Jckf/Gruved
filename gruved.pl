@@ -1,6 +1,4 @@
-$|=1;
 #!/usr/bin/perl
-use Math::Round qw(:all);
 use strict;
 use warnings;
 use Devel::SimpleTrace;
@@ -16,6 +14,7 @@ use World;
 use Chunk;
 use Player;
 use Entity;
+use Math::Round qw(:all);
 
 our $log = Logger->new();
 
@@ -304,32 +303,53 @@ sub pp_poslook {
 			$p->update_position();
 			return;
 		}
-        if (0 && $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(round($x % 16),round($y),round($z % 16))->[0] != 0) {
-            print "$x,$y,$z @ $cx,$cz is fucked up -> ".(join ',',round($x % 16),round($y),round($z % 16))."\n";
-            $p->{'entity'}->{'y'}++;
-            $p->{'entity'}->{'y2'}++;
+		if (0 && $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(round($x % 16),round($y),round($z % 16))->[0] != 0) {
+			print "$x,$y,$z @ $cx,$cz is fucked up -> ".(join ',',round($x % 16),round($y),round($z % 16))."\n";
+			$p->{'entity'}->{'y'}++;
+			$p->{'entity'}->{'y2'}++;
 			$p->update_position();
-            $p->send(
-                $pf->build(
-                    0x35,
-                    round($x),
-                    round($y),
-                    round($z),
-                    1,
-                    0
-                )
-            );
-            return;
-        }
-        #collision detection
-        foreach my $bx (round($x)-1..round($x)+1) {
-            foreach my $bz (round($z)-1..round($z)+1) {
-                
-            }
-        }
+			$p->send(
+				$pf->build(
+					0x35,
+					round($x),
+					round($y),
+					round($z),
+					1,
+					0
+				)
+			);
+			return;
+		}
+		#collision detection
+		foreach my $bx (round($x)-1..round($x)+1) {
+			foreach my $bz (round($z)-1..round($z)+1) {
+				
+			}
+		}
 	}
 
 	$p->teleport($x,$y,$y2,$z,$yaw,$pitch,$on_ground);
+}
+
+sub pp_dig {
+	my ($e,$s,$st,$x,$y,$z,$face)=@_;
+	return if $st == 4;
+	print "DUG! $x,$y,$z:".(($x % 16).','.($z % 16))."\n";
+	my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
+	my $p=$srv->get_player($s);
+	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
+	foreach my $o ($srv->get_players()) {
+		$o->send(
+			$pf->build(
+				0x35,
+				$x,
+				$y,
+				$z,
+				0,
+				0
+			)
+		);
+	}
 }
 
 sub pp_status {
@@ -346,26 +366,5 @@ sub pp_quit {
 }
 
 sub collision {
-    my ($x,$y,$z,$bx,$by,$bz)=@_;
-}
-
-sub pp_dig {
-    my ($e,$s,$st,$x,$y,$z,$face)=@_;
-    return if $st == 4;
-    print "DUG! $x,$y,$z:".(($x % 16).','.($z % 16))."\n";
-    my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
-    my $p=$srv->get_player($s);
-    $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
-    foreach my $o ($srv->get_players()) {
-        $o->send(
-            $pf->build(
-                0x35,
-                $x,
-                $y,
-                $z,
-                0,
-                0
-            )
-        );
-    }
+	my ($x,$y,$z,$bx,$by,$bz)=@_;
 }

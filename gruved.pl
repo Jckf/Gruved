@@ -14,7 +14,6 @@ use World;
 use Chunk;
 use Player;
 use Entity;
-use Math::Round qw(:all);
 
 our $log = Logger->new();
 
@@ -303,28 +302,22 @@ sub pp_poslook {
 			$p->update_position();
 			return;
 		}
-		if (0 && $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(round($x % 16),round($y),round($z % 16))->[0] != 0) {
-			print "$x,$y,$z @ $cx,$cz is fucked up -> ".(join ',',round($x % 16),round($y),round($z % 16))."\n";
+		if (0 && $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
+			print "$x,$y,$z @ $cx,$cz is fucked up -> ".(join ',',int($x % 16),int($y),int($z % 16))."\n";
 			$p->{'entity'}->{'y'}++;
 			$p->{'entity'}->{'y2'}++;
 			$p->update_position();
 			$p->send(
 				$pf->build(
 					0x35,
-					round($x),
-					round($y),
-					round($z),
+					int($x),
+					int($y),
+					int($z),
 					1,
 					0
 				)
 			);
 			return;
-		}
-		#collision detection
-		foreach my $bx (round($x)-1..round($x)+1) {
-			foreach my $bz (round($z)-1..round($z)+1) {
-				
-			}
 		}
 	}
 

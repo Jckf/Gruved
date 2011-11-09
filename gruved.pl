@@ -293,6 +293,7 @@ sub pp_poslook {
 
 	if (defined $x && defined $y && defined $z) {
 		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
+		$x-- if $x < 0; $z-- if $z < 0;
 		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
 			$p->update_position();
 			return;
@@ -311,7 +312,6 @@ sub pp_dig {
 
 	my $p = $srv->get_player($s);
 
-	$log->cyan(($x % 16) . ' x ' . ($z % 16));
 	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
 
 	# TODO: We should probably create an automatic system for sending changes at the end of

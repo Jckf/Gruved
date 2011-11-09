@@ -6,7 +6,13 @@ use warnings;
 use Encode;
 use Packet;
 
-use constant PLATFORM => eval { pack('q',1) } ? 64 : 32;
+BEGIN {
+	use Platform;
+	if (Platform::BITS == 32) {
+		require Math::Int64;
+		Math::Int64->import(qw(net_to_int64 int64_to_number));
+	}
+}
 
 my (@types,@structures,@dynamic);
 
@@ -15,7 +21,7 @@ $types[Packet::BOOL    ] = sub { chr($_[0] ? 1 : 0) };
 $types[Packet::BYTE    ] = sub { chr($_[0])         };
 $types[Packet::INT     ] = sub { pack('i>',$_[0])   };
 $types[Packet::SHORT   ] = sub { pack('s>',$_[0])   };
-$types[Packet::LONG    ] = PLATFORM == 64 ? sub { pack('q>',$_[0]) } : sub { int64_to_net(int64($_[0])) };
+$types[Packet::LONG    ] = Platform::BITS == 64 ? sub { pack('q>',$_[0]) } : sub { int64_to_net(int64($_[0])) };
 $types[Packet::FLOAT   ] = sub { pack('f>',$_[0])   };
 $types[Packet::DOUBLE  ] = sub { pack('d>',$_[0])   };
 $types[Packet::STRING16] = sub { pack('s>',length($_[0])) . encode('ucs-2be',$_[0]) };

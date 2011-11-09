@@ -7,22 +7,13 @@ use Data::Dumper;
 use Encode;
 use Events;
 use Packet;
-our $IS_64BIT;
+
 BEGIN {
-    local $@;
-    eval {no strict;no warnings;pack 'Q', 42;};
-    if ($@) {
-        $IS_64BIT=0;
-        eval {
-            require Math::Int64;
-            Math::Int64->import(qw(net_to_int64 int64_to_number));
-        };
-        if ($@) {
-            die "GRUVED requires a 64-bit build of perl, or Math::Int64.\n";
-        }
-    }else{
-        $IS_64BIT=1;
-    }
+	use Platform;
+	if (Platform::BITS == 32) {
+		require Math::Int64;
+		Math::Int64->import(qw(net_to_int64 int64_to_number));
+	}
 }
 
 use constant {
@@ -35,11 +26,7 @@ $types[Packet::BOOL    ] = sub { sysread($_[0],my $data,1); ord($data) ? 1 : 0; 
 $types[Packet::BYTE    ] = sub { sysread($_[0],my $data,1); ord($data);         };
 $types[Packet::INT     ] = sub { sysread($_[0],my $data,4); unpack('i>',$data); };
 $types[Packet::SHORT   ] = sub { sysread($_[0],my $data,2); unpack('s>',$data); };
-if ($IS_64BIT) {
-	$types[Packet::LONG    ] = sub { sysread($_[0],my $data,8); unpack('q>',$data); };
-}else{
-    $types[Packet::LONG    ] = sub { sysread($_[0],my $data,8); int64_to_number(net_to_int64($data))};
-}
+$types[Packet::LONG    ] = Platform::BITS == 64 ? sub { sysread($_[0],my $data,8); unpack('q>',$data); } : sub { sysread($_[0],my $data,8); int64_to_number(net_to_int64($data)) };
 $types[Packet::FLOAT   ] = sub { sysread($_[0],my $data,4); unpack('f>',$data); };
 $types[Packet::DOUBLE  ] = sub { sysread($_[0],my $data,8); unpack('d>',$data); };
 $types[Packet::STRING16] = sub {
@@ -64,14 +51,12 @@ $types[Packet::STRING16] = sub {
 @{$structures[Packet::ANIMATE ]} = (Packet::INT,Packet::BYTE);
 @{$structures[Packet::ACTION  ]} = (Packet::INT,Packet::BYTE);
 @{$structures[Packet::CLOSE   ]} = (Packet::BYTE);
-@{$structures[Packet::CLICK   ]} = (Packet::BYTE,Packet::SHORT,Packet::BYTE,Packet::SHORT,Packet::BOOL,Packet::SHORT,Packet::BYTE,Packet::SHORT);
+@{$structures[Packet::CLICK   ]} = (Packet::BYTE,Packet::SHORT,Packet::BYTE,Packet::SHORT,Packet::BOOL,Packet::SHORT);
+@{$structures[Packet::CREATIVE]} = (Packet::SHORT,Packet::SHORT,Packet::SHORT,Packet::SHORT);
 @{$structures[Packet::STATUS  ]} = ();
 @{$structures[Packet::QUIT    ]} = ();
 
-@{$structures[0x6B]} = (Packet::SHORT,Packet::SHORT,Packet::SHORT,Packet::SHORT);
-@{$structures[0x66]} = (Packet::BYTE,Packet::SHORT,Packet::BYTE,Packet::SHORT,Packet::BOOL,Packet::SHORT);
-
-$dynamic[0x66] = $dynamic[Packet::PLACE] = sub {
+$dynamic[Packet::CLICK] = $dynamic[Packet::PLACE] = sub {
 	if ($_[5] >= 0) {
 		push(@_,&{$types[Packet::BYTE]}($_[0]));
 		push(@_,&{$types[Packet::SHORT]}($_[0]));

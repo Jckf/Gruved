@@ -85,12 +85,7 @@ sub sf_tick {
 
 sub timer_time {
 	$srv->{'time'}++;
-	#print "Time: $srv->{'time'}         \r";
-	if (int($srv->{'time'}) == $srv->{'time'}) {
-		foreach my $p ($srv->get_players()) {
-			$p->set_time(($srv->{'time'} * 20) % 24000);
-		}
-	}
+	$_->set_time(($srv->{'time'} * 20) % 24000) for $srv->get_players();
 }
 
 sub sf_accept {
@@ -165,6 +160,8 @@ sub pp_filter {
 	my ($e,$s,$id) = @_;
 	my $p = $srv->get_player($s);
 
+	return if ($p->{'runlevel'} == Player::LOGIN);
+
 	if ($p->{'runlevel'} == Player::NEW) {
 		if ($id == Packet::HELLO || $id == Packet::STATUS) {
 			return;
@@ -173,8 +170,6 @@ sub pp_filter {
 		if ($id == Packet::LOGIN) {
 			return;
 		}
-	} elsif ($p->{'runlevel'} == Player::LOGIN) {
-		return;
 	}
 
 	$e->{'cancelled'} = 1;
@@ -298,25 +293,8 @@ sub pp_poslook {
 
 	if (defined $x && defined $y && defined $z) {
 		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
-		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz)) {
+		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
 			$p->update_position();
-			return;
-		}
-		if (0 && $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
-			print "$x,$y,$z @ $cx,$cz is fucked up -> ".(join ',',int($x % 16),int($y),int($z % 16))."\n";
-			$p->{'entity'}->{'y'}++;
-			$p->{'entity'}->{'y2'}++;
-			$p->update_position();
-			$p->send(
-				$pf->build(
-					0x35,
-					int($x),
-					int($y),
-					int($z),
-					1,
-					0
-				)
-			);
 			return;
 		}
 	}
@@ -325,16 +303,23 @@ sub pp_poslook {
 }
 
 sub pp_dig {
-	my ($e,$s,$st,$x,$y,$z,$face)=@_;
-	return if $st == 4;
-	print "DUG! $x,$y,$z:".(($x % 16).','.($z % 16))."\n";
+	my ($e,$s,$a,$x,$y,$z,$f) = @_;
+
+	return if $a != 2;
+
 	my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
-	my $p=$srv->get_player($s);
+
+	my $p = $srv->get_player($s);
+
+	$log->cyan(($x % 16) . ' x ' . ($z % 16));
 	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
+
+	# TODO: We should probably create an automatic system for sending changes at the end of
+	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
 	foreach my $o ($srv->get_players()) {
 		$o->send(
 			$pf->build(
-				0x35,
+				Packet::BLOCK,
 				$x,
 				$y,
 				$z,
@@ -356,8 +341,4 @@ sub pp_status {
 
 sub pp_quit {
 	$sf->close($_[1]);
-}
-
-sub collision {
-	my ($x,$y,$z,$bx,$by,$bz)=@_;
 }

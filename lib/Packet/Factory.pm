@@ -5,23 +5,8 @@ use strict;
 use warnings;
 use Encode;
 use Packet;
-our $IS_64BIT;
-BEGIN {
-    local $@;
-    eval {no strict;no warnings;pack 'Q', 42;};
-    if ($@) {
-        $IS_64BIT=0;
-        eval {
-            require Math::Int64;
-            Math::Int64->import(qw(int64 int64_to_net));
-        };
-        if ($@) {
-            die "GRUVED requires a 64-bit build of perl, or Math::Int64.\n";
-        }
-    }else{
-        $IS_64BIT=1;
-    }
-}
+
+use constant PLATFORM => eval { pack('q',1) } ? 64 : 32;
 
 my (@types,@structures,@dynamic);
 
@@ -30,13 +15,7 @@ $types[Packet::BOOL    ] = sub { chr($_[0] ? 1 : 0) };
 $types[Packet::BYTE    ] = sub { chr($_[0])         };
 $types[Packet::INT     ] = sub { pack('i>',$_[0])   };
 $types[Packet::SHORT   ] = sub { pack('s>',$_[0])   };
-#$types[Packet::LONG    ] = sub { pack('q>',$_[0])   };
-if ($IS_64BIT) {
-    $types[Packet::LONG    ] = sub { pack('q>',$_[0])   };
-}else{
-    $types[Packet::LONG    ] = sub { int64_to_net(int64($_[0])); };
-}
-#$types[Packet::LONG    ] = sub { my $n=ref $_[0] ? $_[0] : new Math::BigInt($_[0]);pack('b64',(substr $n->as_bin(),2)) };
+$types[Packet::LONG    ] = PLATFORM == 64 ? sub { pack('q>',$_[0]) } : sub { int64_to_net(int64($_[0])) };
 $types[Packet::FLOAT   ] = sub { pack('f>',$_[0])   };
 $types[Packet::DOUBLE  ] = sub { pack('d>',$_[0])   };
 $types[Packet::STRING16] = sub { pack('s>',length($_[0])) . encode('ucs-2be',$_[0]) };

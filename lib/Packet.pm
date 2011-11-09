@@ -26,6 +26,7 @@ use constant {
 	TELEPORT => 0x22,
 	CHUNK    => 0x32,
 	CHUNKD   => 0x33,
+	BLOCK    => 0x35,
 	CLOSE    => 0x65,
 	CLICK    => 0x66,
 	SLOT     => 0x67,

@@ -56,7 +56,15 @@ $types[Packet::STRING16] = sub {
 @{$structures[Packet::STATUS  ]} = ();
 @{$structures[Packet::QUIT    ]} = ();
 
-$dynamic[Packet::CLICK] = $dynamic[Packet::PLACE] = sub {
+$dynamic[Packet::CLICK] = sub {
+	if ($_[6] >= 0) {
+		push(@_,&{$types[Packet::BYTE]}($_[0]));
+		push(@_,&{$types[Packet::SHORT]}($_[0]));
+	}
+	shift;
+	return @_;
+};
+$dynamic[Packet::PLACE] = sub {
 	if ($_[5] >= 0) {
 		push(@_,&{$types[Packet::BYTE]}($_[0]));
 		push(@_,&{$types[Packet::SHORT]}($_[0]));

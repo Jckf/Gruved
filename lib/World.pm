@@ -14,7 +14,7 @@ sub new {
 	my $self = {};
 
 	$self->{'timer'} = Timer->new(30); # TODO: Setting for chunk save interval?
-	$self->{'timer'}->bind(sub { $::log->cyan('Saving world...'); $self->save() });
+	$self->{'timer'}->bind(sub { $::log->cyan('Saving world '.($self->{'name'}).'...'); $self->save() });
 	$::sf->bind(SocketFactory::TICK,sub { $self->{'timer'}->tick() });
 
 	$self->{'chunks'} = {};

@@ -80,9 +80,13 @@ $log->magenta('Loading plugins...');
 
 our %plugins;
 foreach my $file (<plugins/*.pm>) {
-	do $file;
 	my $plugin = $file; $plugin =~ s/.*\/(.*)\.pm/$1/i;
 	$::log->magenta("\t" . $plugin . '...');
+	eval {do $file;};
+	if ($@) {
+		$::log->red("\t\t" . ' could not be loaded: '.$@);
+		next;
+	}
 	local $@; #Prevent bugs with previous errors
 	eval { #If a plugin fails, it shouldn't crash the whole server, right?
 		$plugins{$plugin} = $plugin->new();
@@ -106,7 +110,7 @@ if (!-d 'worlds') {
 	mkdir 'worlds';
 }
 
-my %worlds;
+our %worlds;
 foreach my $dir (<worlds/*>) {
 	if (-d $dir) {
 		my $world = $dir; $world =~ s/.*\///;

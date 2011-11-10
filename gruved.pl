@@ -370,7 +370,7 @@ sub pp_dig {
 	my $p = $srv->get_player($s);
 	return if $a != 2 && $p->{'gamemode'} == 0; # TODO: Record when a player starts digging and return if he finishes early.
 	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-	$p->{'entity'}->{'world'}->{'name'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
+	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
 	
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
@@ -406,7 +406,7 @@ sub pp_place {
 		$p->message("ID < 0");
 	}elsif ($id < 255) {
 		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-		$worlds{$p->{'entity'}->{'world'}->{'name'}}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[$id]);
+		$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[$id]);
 		foreach my $o ($srv->get_players()) {
 			next unless $o->{'entity'}->{'world'}->{'name'} eq $p->{'entity'}->{'world'}->{'name'};
 			$o->send(

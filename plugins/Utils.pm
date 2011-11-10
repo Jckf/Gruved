@@ -80,5 +80,7 @@ sub goto_world {
 		}
 	}
 	$p->update_chunks();
+	$p->{'entity'}->{'y'}+=0.25;
+	$p->{'entity'}->{'y2'}+=0.25;
 	$p->update_position();
 }

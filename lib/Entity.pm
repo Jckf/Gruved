@@ -38,7 +38,7 @@ sub teleport {
 	$self->{'on_ground'} = $on_ground if defined $on_ground;
 
 	foreach my $p ($::srv->get_players()) {
-		if ($self->{'id'} != $p->{'entity'}->{'id'}) {
+		if ($self->{'id'} != $p->{'entity'}->{'id'} && $p->{'entity'}->{'world'}->{'name'} eq $self->{'world'}->{'name'}) {
 			$p->send(
 				$::pf->build(
 					Packet::TELEPORT,

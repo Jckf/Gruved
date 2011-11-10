@@ -73,6 +73,7 @@ $pp->bind(Packet::POSITION,\&pp_position);
 $pp->bind(Packet::LOOK    ,\&pp_look);
 $pp->bind(Packet::POSLOOK ,\&pp_poslook);
 $pp->bind(Packet::DIG     ,\&pp_dig);
+$pp->bind(Packet::PLACE   ,\&pp_place);
 $pp->bind(Packet::STATUS  ,\&pp_status);
 $pp->bind(Packet::QUIT    ,\&pp_quit);
 
@@ -292,7 +293,7 @@ sub pp_login {
 			)
 		);
 
-		if ($o->{'username'} ne $p->{'username'}) {
+		if ($o->{'username'} ne $p->{'username'} && $o->{'entity'}->{'world'}->{'name'} eq $p->{'entity'}->{'world'}->{'name'}) {
 			$o->load_entity_named($p->{'entity'});
 			$p->load_entity_named($o->{'entity'});
 		}
@@ -350,10 +351,12 @@ sub pp_poslook {
 					$x,
 					$y,
 					$z,
-					1,
+					$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0],
 					0
 				)
 			);
+			$p->{'entity'}->{'y'}++;
+			$p->{'entity'}->{'y2'}++;
 			$p->update_position();
 			return;
 		}
@@ -364,15 +367,11 @@ sub pp_poslook {
 
 sub pp_dig {
 	my ($e,$s,$a,$x,$y,$z,$f) = @_;
-
-	return if $a != 2; # TODO: Record when a player starts digging and return if he finishes early.
-
-	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-
 	my $p = $srv->get_player($s);
-
-	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
-
+	return if $a != 2 && $p->{'gamemode'} == 0; # TODO: Record when a player starts digging and return if he finishes early.
+	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
+	$p->{'entity'}->{'world'}->{'name'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
+	
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
 	foreach my $o ($srv->get_players()) {
@@ -386,6 +385,41 @@ sub pp_dig {
 				0
 			)
 		);
+	}
+}
+
+sub pp_place {
+	my ($e,$s,$x,$y,$z,$d,$id,$amt,$dmg)=@_;
+	my $p=$::srv->get_player($s);
+	my ($bx,$by,$bz)=($x,$y,$z);
+	$by-- if $d == 0;
+	$by++ if $d == 1;
+	$bz-- if $d == 2;
+	$bz++ if $d == 3;
+	$bx-- if $d == 4;
+	$bx++ if $d == 5;
+	if ($x==-1 && $y==-1 && $z==-1 && $d==-1) { #Eating, shooting, buckets
+		$p->message("Items are not supported yet");
+	}elsif ($id > 255) {
+		$p->message("Items are not supported yet");
+	}elsif ($id < 0) {
+		$p->message("ID < 0");
+	}elsif ($id < 255) {
+		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
+		$worlds{$p->{'entity'}->{'world'}->{'name'}}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[$id]);
+		foreach my $o ($srv->get_players()) {
+			next unless $o->{'entity'}->{'world'}->{'name'} eq $p->{'entity'}->{'world'}->{'name'};
+			$o->send(
+				$pf->build(
+					Packet::BLOCK,
+					$bx,
+					$by,
+					$bz,
+					$id,
+					0
+				)
+			);
+		}
 	}
 }
 

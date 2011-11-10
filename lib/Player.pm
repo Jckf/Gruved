@@ -107,6 +107,19 @@ sub update_chunks {
 	}
 }
 
+sub update_gamemode {
+	my ($self,$gm)=@_;
+	#return if $self->{'gamemode'} == $gm;
+	$self->{'gamemode'}=$gm;
+	$self->send(
+		$::pf->build(
+			Packet::STATE,
+			3,
+			$gm
+		)
+	);
+}
+
 sub load_chunk {
 	my ($self,$x,$z) = @_;
 

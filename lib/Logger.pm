@@ -27,7 +27,7 @@ sub header {
 	print color ('black on_white');
 	my $first = ' ' x ((80 - length($_[1])) / 2) . $_[1];
 	print $first . ' ' x (80 - length($first));
-	print color ('reset');
+	print color ('reset')."\n";
 }
 
 sub log {
@@ -63,6 +63,10 @@ sub AUTOLOAD {
 	$c =~ s/.*://;
 
 	return $self->log($data,$c) if $c ne 'DESTROY';
+}
+
+sub DESTROY {
+	print color ('reset');
 }
 
 1;

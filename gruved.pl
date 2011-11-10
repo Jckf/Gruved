@@ -21,6 +21,7 @@ our $log = Logger->new();
 $log->clear();
 
 $log->header('Gruved, the Minecraft server daemon by Jim C K Flaten');
+$log->header('http://redmine.mcdevs.org/projects/gruved/');
 $log->header('Distributed under the GNU GPL v3 license');
 
 $log->magenta('Initializing core objects...');
@@ -31,6 +32,25 @@ our $pp  = Packet::Parser ->new();
 our $pf  = Packet::Factory->new();
 
 my $t1s = Timer->new(1);
+
+#I'm not sure where this should go, but it's pretty important...
+$SIG{'INT'}=sub {
+	local $SIG{'INT'};
+	$log->red("Closing due to SIGINT...");
+	# TODO: Save worlds, player data...
+	$log->red("Kicking players...");
+	foreach ($srv->get_players()) {
+		$_->kick("Server is shutting down");
+	}
+	$log->red("Destroying core objects...");
+	undef $pf;
+	undef $pp;
+	undef $sf;
+	undef $srv;
+	$log->red("Done!");
+	undef $log;
+	exit 255;
+};
 
 $log->magenta('Binding to core events...');
 
@@ -63,12 +83,29 @@ foreach my $file (<plugins/*.pm>) {
 	do $file;
 	my $plugin = $file; $plugin =~ s/.*\/(.*)\.pm/$1/i;
 	$::log->magenta("\t" . $plugin . '...');
-	$plugins{$plugin} = $plugin->new();
+	local $@; #Prevent bugs with previous errors
+	eval { #If a plugin fails, it shouldn't crash the whole server, right?
+		$plugins{$plugin} = $plugin->new();
+	};
+	if ($@) {
+		$::log->red("\t\t" . ' could not be loaded: '.$@);
+		if ($@ =~ /Can\'t locate object method "new" via package "$plugin"/) {
+			$::log->red("\t\tPerhaps you need to add a new() method (or a package $plugin; declaration) to $plugin?");
+		}
+	}else{
+		$::log->green("\t\t" . ' loaded successfully');
+	}
 }
 
 $log->magenta('Loading worlds...');
 
 # TODO: Move %worlds into $srv.
+
+if (!-d 'worlds') {
+	$::log->magenta('World directory not found, creating...');
+	mkdir 'worlds';
+}
+
 my %worlds;
 foreach my $dir (<worlds/*>) {
 	if (-d $dir) {
@@ -78,6 +115,15 @@ foreach my $dir (<worlds/*>) {
 			'name' => $world
 		);
 	}
+}
+
+if (!keys %worlds) {
+	$::log->magenta('No worlds found, generating new world \'world\'...');
+	$worlds{'world'} = World->new(
+		'name' => 'world'
+	);
+	mkdir 'worlds/world';
+	mkdir 'worlds/world/chunks';
 }
 
 $log->green('Waiting for connections...');

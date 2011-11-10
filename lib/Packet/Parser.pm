@@ -12,7 +12,7 @@ BEGIN {
 	use Platform;
 	if (Platform::BITS == 32) {
 		require Math::Int64;
-		Math::Int64->import(qw(net_to_int64 int64_to_number));
+		Math::Int64->import(qw(int64 net_to_int64 int64_to_number));
 	}
 }
 

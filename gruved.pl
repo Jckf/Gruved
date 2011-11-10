@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use Devel::SimpleTrace;
+use POSIX 'floor';
 use lib 'lib';
 use Logger;
 use Timer;
@@ -29,7 +30,7 @@ our $sf  = SocketFactory->new();
 our $pp  = Packet::Parser ->new();
 our $pf  = Packet::Factory->new();
 
-my $t1s  = Timer->new(1);
+my $t1s = Timer->new(1);
 
 $log->magenta('Binding to core events...');
 
@@ -57,19 +58,27 @@ $pp->bind(Packet::QUIT    ,\&pp_quit);
 
 $log->magenta('Loading plugins...');
 
-# TODO: Create a class to handle this.
 our %plugins;
 foreach my $file (<plugins/*.pm>) {
 	do $file;
 	my $plugin = $file; $plugin =~ s/.*\/(.*)\.pm/$1/i;
+	$::log->magenta("\t" . $plugin . '...');
 	$plugins{$plugin} = $plugin->new();
 }
 
 $log->magenta('Loading worlds...');
 
-# TODO: Automate this based on data on disk.
+# TODO: Move %worlds into $srv.
 my %worlds;
-$worlds{'world'} = World->new();
+foreach my $dir (<worlds/*>) {
+	if (-d $dir) {
+		my $world = $dir; $world =~ s/.*\///;
+		$::log->magenta("\t" . $world . '...');
+		$worlds{$world} = World->new(
+			'name' => $world
+		);
+	}
+}
 
 $log->green('Waiting for connections...');
 
@@ -89,7 +98,7 @@ sub timer_time {
 }
 
 sub sf_accept {
-	$log->green('New connection from ' . $_[1]->peerhost() . '/' . $_[1]->sockhost() . '.');
+	$log->green('New connection from ' . $_[1]->peerhost() . '/' . $_[1]->sockhost() . '.'); # TODO: Is peerhost() the remote address? Use that in place of x.x.x.x everywhere.
 
 	$srv->add_player(
 		Player->new(
@@ -109,6 +118,7 @@ sub sf_read {
 		$p->kick($pp->{'error'});
 		return;
 	} elsif ($parsed == 0) {
+		warn('Closing socket ' . fileno($s));
 		$sf->close($s);
 		return;
 	}
@@ -121,6 +131,7 @@ sub sf_read {
 	}
 }
 
+# TODO: Remove? I've never seen a socket with an exception.
 sub sf_exception {
 	$log->red('Socket x.x.x.x:x has an exception!');
 	$sf->close($_[1]);
@@ -132,7 +143,7 @@ sub sf_close {
 
 	$log->red('Closing socket x.x.x.x:x...');
 
-	if ($p->{'runlevel'} == 2) {
+	if ($p->{'runlevel'} == Player::LOGIN) {
 		foreach my $o ($srv->get_players()) {
 			$o->send(
 				$pf->build(
@@ -180,13 +191,13 @@ sub pp_login {
 
 	my $p = $srv->get_player($s);
 
-	# TODO: Load data from player file.
-
 	$p->{'entity'} = Entity->new(
 		'player' => $p,
 		'name' => $un,
-		'world' => $worlds{'world'}
+		'world' => $worlds{'world'} # TODO: Load from player or configuration variable for default world.
 	);
+
+	# TODO: Get data from the player object and place them into the entity (coordinates and so on).
 
 	$srv->add_entity($p->{'entity'});
 
@@ -207,18 +218,6 @@ sub pp_login {
 	$p->set_time($srv->{'time'});
 
 	$p->update_chunks();
-
-	$p->send(
-		$::pf->build(
-			Packet::SLOT,
-			0,
-			36,
-			1,
-			64,
-			1
-		)
-	);
-
 	$p->update_position();
 
 	$p->{'runlevel'} = Player::LOGIN;
@@ -292,9 +291,19 @@ sub pp_poslook {
 	my $p = $srv->get_player($s);
 
 	if (defined $x && defined $y && defined $z) {
-		my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
+		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
 		$x-- if $x < 0; $z-- if $z < 0;
 		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
+			$p->send(
+				$pf->build(
+					Packet::BLOCK,
+					$x,
+					$y,
+					$z,
+					1,
+					0
+				)
+			);
 			$p->update_position();
 			return;
 		}
@@ -306,9 +315,9 @@ sub pp_poslook {
 sub pp_dig {
 	my ($e,$s,$a,$x,$y,$z,$f) = @_;
 
-	return if $a != 2;
+	return if $a != 2; # TODO: Record when a player starts digging and return if he finishes early.
 
-	my ($cx,$cz) = (int($x / 16),int($z / 16)); $cx-- if $x < 0; $cz-- if $z < 0;
+	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
 
 	my $p = $srv->get_player($s);
 
@@ -316,7 +325,6 @@ sub pp_dig {
 
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
-	#       Chunks with altered blocks even have a flag saying they have been changed, so it's pretty much ready for it.
 	foreach my $o ($srv->get_players()) {
 		$o->send(
 			$pf->build(

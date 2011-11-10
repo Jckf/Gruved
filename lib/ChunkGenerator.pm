@@ -33,6 +33,7 @@ sub generate {
 				}
 			}
 		}
+		$chunk->{'modified'} = 0;
 		$_[0]->{'cache'} = $chunk;
 	}
 

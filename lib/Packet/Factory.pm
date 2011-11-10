@@ -10,7 +10,7 @@ BEGIN {
 	use Platform;
 	if (Platform::BITS == 32) {
 		require Math::Int64;
-		Math::Int64->import(qw(net_to_int64 int64_to_number));
+		Math::Int64->import(qw(int64 net_to_int64 int64_to_net));
 	}
 }
 
@@ -38,10 +38,10 @@ $types[Packet::STRING16] = sub { pack('s>',length($_[0])) . encode('ucs-2be',$_[
 @{$structures[Packet::TELEPORT]} = (Packet::INT,Packet::INT,Packet::INT,Packet::INT,Packet::BYTE,Packet::BYTE);
 @{$structures[Packet::CHUNK   ]} = (Packet::INT,Packet::INT,Packet::BOOL);
 @{$structures[Packet::CHUNKD  ]} = (Packet::INT,Packet::SHORT,Packet::INT,Packet::BYTE,Packet::BYTE,Packet::BYTE,Packet::INT,Packet::RAW);
+@{$structures[Packet::BLOCK   ]} = (Packet::INT,Packet::BYTE,Packet::INT,Packet::BYTE,Packet::BYTE);
 @{$structures[Packet::SLOT    ]} = (Packet::BYTE,Packet::SHORT,Packet::SHORT);
 @{$structures[Packet::LIST    ]} = (Packet::STRING16,Packet::BOOL,Packet::SHORT);
 @{$structures[Packet::QUIT    ]} = (Packet::STRING16);
-@{$structures[0x35]}=(Packet::INT,Packet::BYTE,Packet::INT,Packet::BYTE,Packet::BYTE);
 
 $dynamic[Packet::SLOT] = sub {
 	if ($_[2] > -1) {

@@ -16,6 +16,8 @@ use constant {
 	CLOSE     => 4
 };
 
+$SIG{'PIPE'} = 'IGNORE';
+
 sub new {
 	my ($class,%options) = @_;
 	my $self = {};
@@ -48,7 +50,7 @@ sub run {
 	$self->{'select'}->add($self->{'listener'});
 
 	while ($self->{'listener'}) {
-		my @sockets = $self->{'select'}->can_read(0) or sleep 0.001;
+		my @sockets = $self->{'select'}->can_read(0) or sleep 0.01;
 		foreach my $socket (@sockets) {
 			if (fileno($socket) == fileno($self->{'listener'})) {
 				my $client = $socket->accept();

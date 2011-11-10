@@ -15,7 +15,7 @@ sub new {
 	my ($class,%options) = @_;
 	my $self = {};
 
-	$self->{'runlevel'} = 0;
+	$self->{'runlevel'} = NEW;
 	$self->{'keepalive'} = time();
 	$self->{'latency'} = 0;
 
@@ -27,6 +27,8 @@ sub new {
 	$self->{'difficulty'} = 0;
 
 	$self->{$_} = $options{$_} for keys %options;
+
+	# TODO: Load player data from disk.
 
 	bless($self,$class);
 }
@@ -145,7 +147,7 @@ sub unload_chunk {
 sub kick {
 	my ($self,$msg,$automated) = @_;
 
-	$::log->red(($self->{'runlevel'} >= 1 ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
+	$::log->red(($self->{'runlevel'} >= HELLO ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
 
 	$self->send(
 		$::pf->build(

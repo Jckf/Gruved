@@ -1,5 +1,7 @@
 package FloodControl;
 use Time::HiRes 'time';
+use strict;
+use warnings;
 sub new {
 	my ($class)=@_;
 	my $self={};
@@ -11,15 +13,15 @@ sub new {
 			$p->kick("Oversize chat");
 			$e->{'cancelled'}=1;
 		}
-		my $diff=time() - $p->{'plugindata'}->{'FloodControl'}->{'lastmsg'};
+		my $diff=time() - ($p->{'plugindata'}->{'FloodControl'}->{'lastmsg'} || 0);
 		$p->{'plugindata'}->{'FloodControl'}->{'level'}=0 unless defined $p->{'plugindata'}->{'FloodControl'}->{'level'};
 		if ($diff < 0.25) {
 			$p->{'plugindata'}->{'FloodControl'}->{'level'}+=length($m)/($diff*128);
 		}elsif ($p->{'plugindata'}->{'FloodControl'}->{'level'} > 0) {
 			$p->{'plugindata'}->{'FloodControl'}->{'level'}*=1/($diff);
 		}
-		$::log->magenta($p->{'plugindata'}->{'FloodControl'}->{'level'});
 		if ($p->{'plugindata'}->{'FloodControl'}->{'level'} > 1000) {
+			$::log->red($p->{'username'}. ' kicked for flooding chat!');
 			$p->kick('Chat flooder!');
 			$e->{'cancelled'}=1;
 		}
@@ -28,3 +30,4 @@ sub new {
 	
 	bless($self,$class);
 }
+1;

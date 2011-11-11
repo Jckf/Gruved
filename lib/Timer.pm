@@ -10,7 +10,7 @@ sub new {
 	my $self = {};
 
 	$self->{'interval'} = $interval || 1;
-	$self->{'previous'} = time()+$offset;
+	$self->{'previous'} = time()+($offset ? $offset : 0);
 	$self->{'callbacks'} = [];
 
 	bless($self,$class);

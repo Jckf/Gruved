@@ -17,3 +17,4 @@ sub new {
 
 	bless($self,$class);
 }
+1;

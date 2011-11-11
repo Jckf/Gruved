@@ -41,10 +41,10 @@ sub run {
 
 	$self->{'select'} = IO::Select->new();
 	$self->{'listener'} = IO::Socket::INET->new(
-		'Proto'		=> 'tcp',
-		'LocalPort'	=> $self->{'port'},
-		'LocalAddr'	=> $self->{'bind'},
-		'Listen'	=> 5
+		'Proto'	    => 'tcp',
+		'LocalPort' => $self->{'port'},
+		'LocalAddr' => $self->{'bind'},
+		'Listen'    => 5
 	)or die($!);
 
 	$self->{'select'}->add($self->{'listener'});

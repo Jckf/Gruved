@@ -15,6 +15,7 @@ use World;
 use Chunk;
 use Player;
 use Entity;
+use Permissions;
 
 our $log = Logger->new();
 
@@ -30,6 +31,7 @@ our $srv = Server->new();
 our $sf  = SocketFactory->new();
 our $pp  = Packet::Parser ->new();
 our $pf  = Packet::Factory->new();
+our $perm= Permissions->new();
 
 my $t1s = Timer->new(1);
 
@@ -83,22 +85,21 @@ our %plugins;
 foreach my $file (<plugins/*.pm>) {
 	my $plugin = $file; $plugin =~ s/.*\/(.*)\.pm/$1/i;
 	$::log->magenta("\t" . $plugin . '...');
-	eval {do $file;};
-	if ($@) {
+	local $@;
+	eval {require $file;1;} or do {
 		$::log->red("\t\t" . ' could not be loaded: '.$@);
 		next;
-	}
-	local $@; #Prevent bugs with previous errors
+	};
 	eval { #If a plugin fails, it shouldn't crash the whole server, right?
 		$plugins{$plugin} = $plugin->new();
-	};
-	if ($@) {
+		1;
+	} or do {
 		$::log->red("\t\t" . ' could not be loaded: '.$@);
 		if ($@ =~ /Can\'t locate object method "new" via package "$plugin"/) {
 			$::log->red("\t\tPerhaps you need to add a new() method (or a package $plugin; declaration) to $plugin?");
+		}else{
+			$::log->green("\t\t" . ' loaded successfully');
 		}
-	}else{
-		$::log->green("\t\t" . ' loaded successfully');
 	}
 }
 
@@ -364,7 +365,6 @@ sub pp_dig {
 	return if $a != 2 && $p->{'gamemode'} == 0; # TODO: Record when a player starts digging and return if he finishes early.
 	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
 	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[0]);
-	
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
 	foreach my $o ($srv->get_players()) {

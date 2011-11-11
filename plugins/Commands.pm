@@ -30,3 +30,4 @@ sub new {
 sub bind {
 	$_[0]->{'events'}->bind($_[1],$_[2]);
 }
+1;

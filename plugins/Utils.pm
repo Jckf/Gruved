@@ -11,59 +11,62 @@ sub new {
 	my ($class) = @_;
 	my $self = {};
 	no warnings;
-	my ($k,$v);
-	my %nodes=(
-		'utils.world.goto' => '/world goto <world>, /world <world>',
-		'utils.world.save' => '/world save <world>',
-		'utils.world.new' => '/world new <world>',
-		'utils.tp.unstuck' => '//unstuck',
-		'utils.gamemode' => '/gamemode',
-		'utils.listnodes' => '/listnodes');
-	foreach (keys %nodes) {
-		$::perm->regnode($_,$nodes{$_});
-	}
 	
-	$::plugins{'Commands'}->bind('world',sub {
-		my ($e,$s,@args) = @_;
+	$::perm->command('world','world.goto',undef,sub {
+		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
-		if ($args[0] eq 'save' and $::perm->can($p,'utils.world.save')) {
-			$p->{'entity'}->{'world'}->save();
-			$p->message('Saving world...');
-		}elsif ($args[0] eq 'new') {
-			$::worlds{$args[1]}=World->new(
-				name => $args[1]
-			);
-			$p->message('Created world '.$args[1]);
-		}elsif ($args[0] eq 'goto') {
-			if ($::worlds{$args[1]}) {
-				goto_world($p,$args[1]);
-			}else{
-				$p->message('No such world: '.$args[1]);
-			}
+		if ($::worlds{$args[0]}) {
+			goto_world($p,$args[0]);
 		}else{
-			if ($::worlds{$args[0]}) {
-				goto_world($p,$args[0]);
-			}else{
-				$p->message('No such world or command: '.$args[0]);
-			}
+			$p->message('No such world: '.$args[0]);
 		}
+		return 0;
+	});
+	
+	$::perm->command('world goto',undef,'Go to a world',sub {
+		my ($e,$s,@args)=@_;
+		my $p=$::srv->get_player($s);
+		if ($::worlds{$args[0]}) {
+			goto_world($p,$args[0]);
+		}else{
+			$p->message('No such world: '.$args[0]);
+		}
+		return 1;
+	});
+	
+	$::perm->command('world save',undef,'Save the current world',sub {
+		my ($e,$s,@args)=@_;
+		my $p=$::srv->get_player($s);
+		$p->message('Saving world...');
+		$p->{'entity'}->{'world'}->save();
+		return 1;
+	});
+	
+	$::perm->command('world new',undef,'Create a new world',sub {
+		my ($e,$s,@args)=@_;
+		my $p=$::srv->get_player($s);
+		$p->message('Creating world '.$args[0]);
+		return 1;
 	});
 
-	$::plugins{'Commands'}->bind('/unstuck',sub {
+	$::perm->command('/unstuck','tp.unstuck','Teleport 2 blocks up',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		$p->{'entity'}->{'y'}+=2;
 		$p->{'entity'}->{'y2'}+=2;
 		$p->update_position();
+		return 1;
 	});
 	
-	$::plugins{'Commands'}->bind('gamemode',sub {
+	$::perm->command('gamemode',undef,'Changes game mode to creative and back',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
+		$args[0]=!$p->{'gamemode'} if not $args[0];
 		$p->update_gamemode($args[0]);
+		return 1;
 	});
 	
-	$::plugins{'Commands'}->bind('listnodes',sub {
+	$::perm->command('listnodes',undef,'Lists permission nodes',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		my $pl;
@@ -82,8 +85,8 @@ sub new {
 			}
 		}
 		$p->message($_) foreach tabulate(\@lines,$args[0]);
+		return 1;
 	});
-	
 	bless($self,$class);
 };
 

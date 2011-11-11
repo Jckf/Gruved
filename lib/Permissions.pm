@@ -65,22 +65,31 @@ sub can {
 
 sub command { #Convenience function - registers command as node as well, and checks permissions
 	my ($self,$command,$node,$desc,$sub)=@_;
-	$self->regnode($node,$desc);
+	$sub=$desc if ref $desc eq 'CODE';
+	$sub=$node if ref $node eq 'CODE';
+	$desc='' if ref $desc eq 'CODE';
 	my @cmdparts=($command);
 	if ($command =~ / /) {
 		@cmdparts=split / /,$command;
 	}
+	$node=$self->_getpl().'.'.($node && ref $node ne 'CODE' ? $node : join '.',@cmdparts) ;
+	$self->regnode($node,$desc) if not defined $self->{'nodes'}->{$self->_getpl()}->{$node};
 	$::plugins{'Commands'}->bind(shift @cmdparts,sub {
 		my ($e,$s,@args) = @_;
-		foreach (0..scalar(@cmdparts)) {
-			return if $args[$_] != $cmdparts[$_];
+		if (scalar(@cmdparts)) {
+			foreach (0..scalar(@cmdparts)) {
+				last if not $cmdparts[$_];
+				return if (shift @args || '') ne ($cmdparts[$_]);
+			}
 		}
-		$e->{'cancelled'}=1;
 		my $p=$::srv->get_player($s);
 		if ($self->can($p,$node)) {
-			$sub->(@_);
+			if ($sub->($e,$s,@args)) {
+				$e->{'cancelled'}=1;
+			}
 		}else{
 			$p->message("You don't have permission for $command ($desc)");
+			$e->{'cancelled'}=1;
 		}
 	});
 }

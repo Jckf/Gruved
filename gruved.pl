@@ -15,6 +15,7 @@ use World;
 use Chunk;
 use Player;
 use Entity;
+use Commands;
 use Permissions;
 
 our $log = Logger->new();
@@ -31,7 +32,6 @@ our $srv = Server->new();
 our $sf  = SocketFactory->new();
 our $pp  = Packet::Parser ->new();
 our $pf  = Packet::Factory->new();
-our $perm= Permissions->new();
 
 my $t1s = Timer->new(1);
 
@@ -78,6 +78,9 @@ $pp->bind(Packet::DIG     ,\&pp_dig);
 $pp->bind(Packet::PLACE   ,\&pp_place);
 $pp->bind(Packet::STATUS  ,\&pp_status);
 $pp->bind(Packet::QUIT    ,\&pp_quit);
+
+our $cmd = Commands->new();
+our $perm= Permissions->new();
 
 $log->magenta('Loading plugins...');
 

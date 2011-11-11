@@ -74,7 +74,7 @@ sub command { #Convenience function - registers command as node as well, and che
 	}
 	$node=$self->_getpl().'.'.($node && ref $node ne 'CODE' ? $node : join '.',@cmdparts) ;
 	$self->regnode($node,$desc) if not defined $self->{'nodes'}->{$self->_getpl()}->{$node};
-	$::plugins{'Commands'}->bind(shift @cmdparts,sub {
+	$::cmd->bind(shift @cmdparts,sub {
 		my ($e,$s,@args) = @_;
 		if (scalar(@cmdparts)) {
 			foreach (0..scalar(@cmdparts)) {

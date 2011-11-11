@@ -66,8 +66,16 @@ sub can {
 sub command { #Convenience function - registers command as node as well, and checks permissions
 	my ($self,$command,$node,$desc,$sub)=@_;
 	$self->regnode($node,$desc);
-	$::plugins{'Commands'}->bind($command,sub {
+	my @cmdparts=($command);
+	if ($command =~ / /) {
+		@cmdparts=split / /,$command;
+	}
+	$::plugins{'Commands'}->bind(shift @cmdparts,sub {
 		my ($e,$s,@args) = @_;
+		foreach (0..scalar(@cmdparts)) {
+			return if $args[$_] != $cmdparts[$_];
+		}
+		$e->{'cancelled'}=1;
 		my $p=$::srv->get_player($s);
 		if ($self->can($p,$node)) {
 			$sub->(@_);

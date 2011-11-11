@@ -12,7 +12,7 @@ sub new {
 	my $self = {};
 	no warnings;
 	
-	$::perm->command('world','world.goto',undef,sub {
+	$::cmd->command('world','world.goto',undef,sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		if ($::worlds{$args[0]}) {
@@ -23,7 +23,7 @@ sub new {
 		return 0;
 	});
 	
-	$::perm->command('world goto',undef,'Go to a world',sub {
+	$::cmd->command('world goto',undef,'Go to a world',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		if ($::worlds{$args[0]}) {
@@ -34,7 +34,7 @@ sub new {
 		return 1;
 	});
 	
-	$::perm->command('world save',undef,'Save the current world',sub {
+	$::cmd->command('world save',undef,'Save the current world',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		$p->message('Saving world...');
@@ -42,14 +42,14 @@ sub new {
 		return 1;
 	});
 	
-	$::perm->command('world new',undef,'Create a new world',sub {
+	$::cmd->command('world new',undef,'Create a new world',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		$p->message('Creating world '.$args[0]);
 		return 1;
 	});
 
-	$::perm->command('/unstuck','tp.unstuck','Teleport 2 blocks up',sub {
+	$::cmd->command('/unstuck','tp.unstuck','Teleport 2 blocks up',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		$p->{'entity'}->{'y'}+=2;
@@ -58,7 +58,7 @@ sub new {
 		return 1;
 	});
 	
-	$::perm->command('gamemode',undef,'Changes game mode to creative and back',sub {
+	$::cmd->command('gamemode',undef,'Changes game mode to creative and back',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		$args[0]=!$p->{'gamemode'} if not $args[0];
@@ -66,13 +66,13 @@ sub new {
 		return 1;
 	});
 	
-	$::perm->command('listnodes',undef,'Lists permission nodes',sub {
+	$::cmd->command('listnodes',undef,'Lists permission nodes',sub {
 		my ($e,$s,@args)=@_;
 		my $p=$::srv->get_player($s);
 		my $pl;
 		$pl=shift @args if $args[0]!~/^[\d]+$/; 
 		my @lines;
-		my $nodes=$::perm->nodes($pl);
+		my $nodes=$::cmd->nodes($pl);
 		foreach (sort keys %{$nodes}) {
 			if ($pl) {
 				push @lines, [$_,$nodes->{$_}]

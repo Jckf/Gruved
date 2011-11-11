@@ -17,6 +17,7 @@ use Player;
 use Entity;
 use Commands;
 use Permissions;
+use Time::HiRes 'time';
 
 our $log = Logger->new();
 
@@ -341,7 +342,7 @@ sub pp_poslook {
 	if (defined $x && defined $y && defined $z) {
 		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
 		$x-- if $x < 0; $z-- if $z < 0;
-		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
+		if (time() - $p->{'last_moved'} > 0.5 && (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0)) {
 			#$p->send(
 			#	$pf->build(
 			#		Packet::BLOCK,
@@ -352,9 +353,10 @@ sub pp_poslook {
 			#		0
 			#	)
 			#);
-			#$p->{'entity'}->{'y'}++;
-			#$p->{'entity'}->{'y2'}++;
+			$p->{'entity'}->{'y'}++;
+			$p->{'entity'}->{'y2'}++;
 			$p->update_position();
+			$p->{'last_moved'}=time();
 			return;
 		}
 	}

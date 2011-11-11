@@ -140,6 +140,7 @@ sub goto_world {
 			);
 		}
 	}
+	$p->{'chunks_loaded'}={};
 	$p->update_chunks();
 	$p->{'entity'}->{'y'}+=0.25;
 	$p->{'entity'}->{'y2'}+=0.25;

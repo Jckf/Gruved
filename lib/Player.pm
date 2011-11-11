@@ -26,6 +26,9 @@ sub new {
 	$self->{'dimension'} = 0;
 	$self->{'difficulty'} = 0;
 	
+	$self->{'chunks_loaded'} = {};
+	$self->{'last_moved'} = 0;
+	
 	$self->{'plugindata'} = {};
 
 	$self->{$_} = $options{$_} for keys %options;
@@ -102,8 +105,10 @@ sub update_chunks {
 	if ($y) {
 		foreach my $cx (-$::srv->{'view_distance'} .. $::srv->{'view_distance'} ) {
 			foreach my $cz (-$::srv->{'view_distance'} .. $::srv->{'view_distance'}) {
-				# TODO: Check if this user already has this chunk loaded.
-				$self->load_chunk($cx,$cz);
+				if (not $self->{'chunks_loaded'}->{$cx.','.$cz} or $self->{'entity'}->{'world'}->get_chunk($cx,$cz)->{'modified'}) {
+					$self->load_chunk($cx,$cz);
+					$self->{'chunks_loaded'}->{$cx.','.$cz}=1;
+				}
 			}
 		}
 	}
@@ -111,7 +116,6 @@ sub update_chunks {
 
 sub update_gamemode {
 	my ($self,$gm)=@_;
-	#return if $self->{'gamemode'} == $gm;
 	$self->{'gamemode'}=$gm;
 	$self->send(
 		$::pf->build(
@@ -158,6 +162,8 @@ sub unload_chunk {
 			0
 		)
 	);
+	delete $_[0]->{'chunks_loaded'}->{$_[1].','.$_[2]};
+	return;
 }
 
 sub kick {

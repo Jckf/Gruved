@@ -6,11 +6,11 @@ use strict;
 use warnings;
 
 sub new {
-	my ($class,$interval) = @_;
+	my ($class,$interval,$offset) = @_;
 	my $self = {};
 
 	$self->{'interval'} = $interval || 1;
-	$self->{'previous'} = time();
+	$self->{'previous'} = time()+$offset;
 	$self->{'callbacks'} = [];
 
 	bless($self,$class);

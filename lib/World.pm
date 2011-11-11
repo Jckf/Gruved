@@ -8,12 +8,13 @@ use Storable qw(nstore retrieve);
 use Timer;
 use SocketFactory;
 use ChunkGenerator;
+use Tie::Hash::LRU;
 
 sub new {
 	my ($class,%options) = @_;
 	my $self = {};
 
-	$self->{'timer'} = Timer->new(30); # TODO: Setting for chunk save interval?
+	$self->{'timer'} = Timer->new(30,rand(15)-7.5); # TODO: Setting for chunk save interval?
 	$self->{'timer'}->bind(sub { $::log->cyan('Saving world '.($self->{'name'}).'...'); $self->save() });
 	$::sf->bind(SocketFactory::TICK,sub { $self->{'timer'}->tick() });
 
@@ -23,6 +24,8 @@ sub new {
 	$self->{'name'}   = 'world';
 	$self->{'height'} = 128;
 	$self->{'seed'}   = 0;
+	
+	$self->{'chunkcache'} = Tie::Hash::LRU->TIEHASH(100);
 
 	$self->{$_} = $options{$_} for keys %options;
 
@@ -87,6 +90,17 @@ sub get_chunk {
 	}
 
 	return $self->{'chunks'}->{$x . ',' . $z};
+}
+
+sub deflate_chunk { #Attempt at chunk caching :/
+	my ($self,$x,$z)=@_;
+	return $self->get_chunk($x,$z)->deflate();
+	my $v=Tie::Hash::LRU::FETCH($self->{'chunkcache'},$x.','.$z);
+	return $v if $v && $self->get_chunk($x,$z)->{'cached'};
+	$v=$self->get_chunk($x,$z)->deflate();
+	Tie::Hash::LRU::STORE($self->{'chunkcache'},$x.','.$z,$v);
+	$self->get_chunk($x,$z)->{'cached'}=1;
+	return $v;
 }
 
 1;

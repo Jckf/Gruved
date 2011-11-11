@@ -25,6 +25,8 @@ sub new {
 	$self->{'gamemode'} = 0;
 	$self->{'dimension'} = 0;
 	$self->{'difficulty'} = 0;
+	
+	$self->{'plugindata'} = {};
 
 	$self->{$_} = $options{$_} for keys %options;
 
@@ -123,7 +125,8 @@ sub update_gamemode {
 sub load_chunk {
 	my ($self,$x,$z) = @_;
 
-	my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
+	#my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
+	my $c = $self->{'entity'}->{'world'}->deflate_chunk($x,$z);
 
 	$self->send(
 		$::pf->build(

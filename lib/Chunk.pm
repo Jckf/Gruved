@@ -11,6 +11,7 @@ sub new {
 	my $self = {};
 
 	$self->{'modified'} = 0;
+	$self->{'cached'} = 0;
 	$self->{'blocks'} = [];
 
 	bless($self,$class);
@@ -20,6 +21,7 @@ sub new {
 
 sub set_block {
 	$_[0]->{'modified'} = 1;
+	$_[0]->{'cached'} = 0;
 	$_[0]->{'blocks'}->[$_[2] + ($_[3] * 128) + ($_[1] * 128 * 16)] = $_[4];
 }
 
@@ -37,7 +39,7 @@ sub deflate {
 
 	$types = pack 'C*', map { $_ ? $_->[0] : 0 } @{$self->{blocks}};
 
-	my $z = deflateInit(-Level => Z_BEST_SPEED);
+	my $z = deflateInit(-Level => Z_NO_COMPRESSION);
 	return $z->deflate($types . $data . $light) . $z->flush();
 }
 

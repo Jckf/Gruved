@@ -106,11 +106,6 @@ $log->magenta('Loading worlds...');
 
 # TODO: Move %worlds into $srv.
 
-if (!-d 'worlds') {
-	$::log->magenta('World directory not found, creating...');
-	mkdir 'worlds';
-}
-
 our %worlds;
 foreach my $dir (<worlds/*>) {
 	if (-d $dir) {
@@ -127,8 +122,6 @@ if (!keys %worlds) {
 	$worlds{'world'} = World->new(
 		'name' => 'world'
 	);
-	mkdir 'worlds/world';
-	mkdir 'worlds/world/chunks';
 }
 
 $log->green('Waiting for connections...');
@@ -345,18 +338,18 @@ sub pp_poslook {
 		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
 		$x-- if $x < 0; $z-- if $z < 0;
 		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0] != 0) {
-			$p->send(
-				$pf->build(
-					Packet::BLOCK,
-					$x,
-					$y,
-					$z,
-					$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[0],
-					0
-				)
-			);
-			$p->{'entity'}->{'y'}++;
-			$p->{'entity'}->{'y2'}++;
+			#$p->send(
+			#	$pf->build(
+			#		Packet::BLOCK,
+			#		$x,
+			#		$y,
+			#		$z,
+			#		1,
+			#		0
+			#	)
+			#);
+			#$p->{'entity'}->{'y'}++;
+			#$p->{'entity'}->{'y2'}++;
 			$p->update_position();
 			return;
 		}
@@ -406,7 +399,7 @@ sub pp_place {
 		$p->message("ID < 0");
 	}elsif ($id < 255) {
 		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-		$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,[$id]);
+		$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($bx % 16,$by,$bz % 16,[$id]);
 		foreach my $o ($srv->get_players()) {
 			next unless $o->{'entity'}->{'world'}->{'name'} eq $p->{'entity'}->{'world'}->{'name'};
 			$o->send(

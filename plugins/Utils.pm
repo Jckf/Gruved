@@ -8,17 +8,15 @@ use warnings;
 
 sub new {
 	my ($class) = @_;
-    my $self = {};
+	my $self = {};
 	no warnings;
-    $::plugins{'Commands'}->bind('world',sub {
-        my ($e,$s,@args) = @_;
+	$::plugins{'Commands'}->bind('world',sub {
+		my ($e,$s,@args) = @_;
 		my $p=$::srv->get_player($s);
-        if ($args[0] eq 'save') {
+		if ($args[0] eq 'save') {
 			$p->{'entity'}->{'world'}->save();
 			$p->message('Saving world...');
 		}elsif ($args[0] eq 'new') {
-			mkdir 'worlds/'.$args[1];
-			mkdir 'worlds/'.$args[1].'/chunks';
 			$::worlds{$args[1]}=World->new(
 				name => $args[1]
 			);
@@ -36,7 +34,7 @@ sub new {
 				$p->message('No such world or command: '.$args[0]);
 			}
 		}
-    });
+	});
 
 	$::plugins{'Commands'}->bind('/unstuck',sub {
 		my ($e,$s,@args)=@_;
@@ -52,7 +50,7 @@ sub new {
 		$p->update_gamemode($args[0]);
 	});
 	
-    bless($self,$class);
+	bless($self,$class);
 };
 
 sub goto_world {

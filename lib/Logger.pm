@@ -27,7 +27,7 @@ sub header {
 	print color ('black on_white');
 	my $first = ' ' x ((80 - length($_[1])) / 2) . $_[1];
 	print $first . ' ' x (80 - length($first));
-	print color ('reset')."\n";
+	print color ('reset');
 }
 
 sub log {

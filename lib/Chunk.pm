@@ -11,36 +11,61 @@ sub new {
 	my $self = {};
 
 	$self->{'modified'} = 0;
-	$self->{'cached'} = 0;
-	$self->{'blocks'} = [];
+
+	my $n = 16 * 16 * 128; # TODO: World height.
+
+	$self->{'types'} = "\0" x $n;
+	$self->{'data'} = "\0" x ($n / 2);
+	$self->{'blocklight'} = chr(0xF) x ($n / 2);
+	$self->{'skylight'} = chr(0xF) x ($n / 2);
 
 	bless($self,$class);
 }
 
-#  index = y + (z * (Size_Y+1)) + (x * (Size_Y+1) * (Size_Z+1))
-
 sub set_block {
-	$_[0]->{'modified'} = 1;
-	$_[0]->{'cached'} = 0;
-	$_[0]->{'blocks'}->[$_[2] + ($_[3] * 128) + ($_[1] * 128 * 16)] = $_[4];
+	my ($self,$x,$y,$z,$b) = @_;
+
+	if ($x > 15 || $z > 15 || $y > 127 || $x < 0 || $z < 0 || $y < 0) {
+		$::log->red('Invalid block placement! (' . $x . ',' . $y . ',' . $z . ')');
+		return 0;
+	}
+
+	my $i = $y + ($z * 128) + ($x * 128 * 16); # TODO: World height.
+
+	$self->{'modified'} = 1;
+
+	vec($self->{'types'     },$i,8) = $b->[Block::TYPE];
+	vec($self->{'data'      },$i,4) = $b->[Block::DATA];
+	vec($self->{'blocklight'},$i,4) = $b->[Block::BLOCKLIGHT];
+	vec($self->{'skylight'  },$i,4) = $b->[Block::SKYLIGHT];
+
+	return 1;
 }
 
 sub get_block {
-	$_[0]->{'blocks'}->[$_[2] + ($_[3] * 128) + ($_[1] * 128 * 16)] || [0];
+	my ($self,$x,$y,$z) = @_;
+
+	my $i = $y + ($z * 128) + ($x * 128 * 16); # TODO: World height.
+
+	return Block->new(
+		vec($self->{'types'     },$i,8),
+		vec($self->{'data'      },$i,4),
+		vec($self->{'blocklight'},$i,4),
+		vec($self->{'skylight'  },$i,4)
+	);
 }
 
 sub deflate {
 	my ($self) = @_;
 
-	my $blocks = 16 * 16 * 128;
-	my $types = '';
-	my $data = "\0" x ($blocks / 2);
-	my $light = chr(0xFF) x $blocks;
-
-	$types = pack 'C*', map { $_ ? $_->[0] : 0 } @{$self->{blocks}};
-
 	my $z = deflateInit(-Level => Z_NO_COMPRESSION);
-	return $z->deflate($types . $data . $light) . $z->flush();
+
+	return $z->deflate(
+		$self->{'types'} .
+		$self->{'data'} .
+		$self->{'blocklight'} .
+		$self->{'skylight'}
+	) . $z->flush();
 }
 
 1;

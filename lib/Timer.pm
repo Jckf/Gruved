@@ -1,16 +1,16 @@
 #!/dev/null
 package Timer;
 
-use Time::HiRes qw(time);
 use strict;
 use warnings;
+use Time::HiRes 'time';
 
 sub new {
 	my ($class,$interval,$offset) = @_;
 	my $self = {};
 
 	$self->{'interval'} = $interval || 1;
-	$self->{'previous'} = time()+($offset ? $offset : 0);
+	$self->{'previous'} = time() + (defined($offset) ? $offset : 0);
 	$self->{'callbacks'} = [];
 
 	bless($self,$class);

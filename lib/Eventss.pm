@@ -19,10 +19,7 @@ sub trigger {
 
 	if (defined $self->{'events'}->{$event}) {
 		my $e = { 'cancelled' => 0 };
-		foreach (reverse @{$self->{'events'}->{$event}}) {
-			&{$_}($e,@data) ;
-			last if $e->{'cancelled'};
-		}
+		&{$_}($e,@data) for (reverse @{$self->{'events'}->{$event}});
 		return $e;
 	}
 }

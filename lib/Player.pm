@@ -8,7 +8,10 @@ use Packet;
 use constant {
 	NEW   => 0,
 	HELLO => 1,
-	LOGIN => 2
+	LOGIN => 2,
+
+	SURVIVAL => 0,
+	CREATIVE => 1
 };
 
 sub new {
@@ -22,14 +25,9 @@ sub new {
 	$self->{'username'} = '';
 	$self->{'displayname'} = '';
 
-	$self->{'gamemode'} = 0;
+	$self->{'gamemode'} = SURVIVAL;
 	$self->{'dimension'} = 0;
 	$self->{'difficulty'} = 0;
-	
-	$self->{'chunks_loaded'} = {};
-	$self->{'last_moved'} = 0;
-	
-	$self->{'plugindata'} = {};
 
 	$self->{$_} = $options{$_} for keys %options;
 
@@ -46,12 +44,10 @@ sub send {
 sub ping {
 	my ($self,$id) = @_;
 
-	$id = 0 if !defined $id;
-
 	$self->send(
 		$::pf->build(
 			Packet::PING,
-			$id
+			$id || 0
 		)
 	);
 }
@@ -105,32 +101,16 @@ sub update_chunks {
 	if ($y) {
 		foreach my $cx (-$::srv->{'view_distance'} .. $::srv->{'view_distance'} ) {
 			foreach my $cz (-$::srv->{'view_distance'} .. $::srv->{'view_distance'}) {
-				if (not $self->{'chunks_loaded'}->{$cx.','.$cz} or $self->{'entity'}->{'world'}->get_chunk($cx,$cz)->{'modified'}) {
-					$self->load_chunk($cx,$cz);
-					$self->{'chunks_loaded'}->{$cx.','.$cz}=1;
-				}
+				$self->load_chunk($cx,$cz);
 			}
 		}
 	}
 }
 
-sub update_gamemode {
-	my ($self,$gm)=@_;
-	$self->{'gamemode'}=$gm;
-	$self->send(
-		$::pf->build(
-			Packet::STATE,
-			3,
-			$gm
-		)
-	);
-}
-
 sub load_chunk {
 	my ($self,$x,$z) = @_;
 
-	#my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
-	my $c = $self->{'entity'}->{'world'}->deflate_chunk($x,$z);
+	my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
 
 	$self->send(
 		$::pf->build(
@@ -145,7 +125,7 @@ sub load_chunk {
 			0,
 			$z * 16,
 			15,
-			127,
+			127, # TODO: World height.
 			15,
 			length($c),
 			$c
@@ -162,14 +142,14 @@ sub unload_chunk {
 			0
 		)
 	);
+
 	delete $_[0]->{'chunks_loaded'}->{$_[1].','.$_[2]};
-	return;
 }
 
 sub kick {
 	my ($self,$msg,$automated) = @_;
 
-	$::log->red(($self->{'runlevel'} >= HELLO ? $self->{'username'} : 'x.x.x.x:x') . ' was kicked!') if !defined($automated);
+	$::log->red(($self->{'runlevel'} >= HELLO ? $self->{'username'} : $self->{'socket'}->peerhost()) . ' was kicked!') if !defined($automated);
 
 	$self->send(
 		$::pf->build(
@@ -203,6 +183,20 @@ sub load_entity_named {
 			($e->{'yaw'} % 360) / 360 * 255,
 			($e->{'pitch'} % 360) / 360 * 255,
 			0
+		)
+	);
+}
+
+sub set_gamemode {
+	my ($self,$m) = @_;
+
+	$self->{'gamemode'} = defined $m ? $m : $::srv->{'gamemode'};
+
+	$self->send(
+		$::pf->build(
+			Packet::STATE,
+			3,
+			$self->{'gamemode'}
 		)
 	);
 }

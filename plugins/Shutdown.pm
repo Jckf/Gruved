@@ -10,21 +10,30 @@ sub new {
 
 	bless($self,$class);
 
-	if (defined $::plugins{'Commands'}) {
-		$self->register();
-	} else {
-		$::onload->bind('Commands',sub {
-			$self->register();
-		});
+	$self->{'loaded'}=0;
+	
+	if (!$self->checkload()) {
+		$::onload->bind('Commands',sub {$self->checkload()});
+		$::onload->bind('Permissions',sub {$self->checkload()});
 	}
 
 	return $self;
 }
 
+sub checkload {
+	my ($self)=@_;
+	if (defined $::plugins{'Commands'} && defined $plugins{'Permissions'}) {
+		$self->register();
+		$self->{'loaded'}=1;
+		return 1;
+	}
+	return 0;
+}
+
 sub register {
 	$::plugins{'Commands'}->bind('shutdown',sub {
 		my ($e,$s,@args) = @_;
-		if ($::srv->get_player($s)->{'username'} eq 'Jckf') {
+		if ($::plugins{'Permissions'}->can($::srv->get_player($s),'shutdown')) {
 			exit;
 		}
 	});

@@ -22,7 +22,7 @@ sub new {
 
 sub checkload {
 	my ($self)=@_;
-	if (defined $::plugins{'Commands'} && defined $plugins{'Permissions'}) {
+	if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'}) {
 		$self->register();
 		$self->{'loaded'}=1;
 		return 1;

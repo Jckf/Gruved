@@ -27,7 +27,7 @@ our $log = Logger->new();
 
 $log->clear();
 
-$log->header('Gruved, the Minecraft server daemon by Jim C K Flaten');
+$log->header('Gruved, the Minecraft server daemon');
 $log->header('Distributed under the GNU GPL v3 license');
 
 $log->magenta('Initializing core objects...');
@@ -66,6 +66,7 @@ $pp->bind(Packet::LOOK    ,\&pp_look);
 $pp->bind(Packet::POSLOOK ,\&pp_poslook);
 $pp->bind(Packet::DIG     ,\&pp_dig);
 $pp->bind(Packet::PLACE   ,\&pp_place);
+$pp->bind(Packet::ACTION  ,\&pp_action);
 $pp->bind(Packet::STATUS  ,\&pp_status);
 $pp->bind(Packet::QUIT    ,\&pp_quit);
 
@@ -181,7 +182,7 @@ sub sf_close {
 			$o->send(
 				$pf->build(
 					Packet::LIST,
-					$p->{'username'},
+					$p->{'displayname'} . '§f', # Yes, we need the color white here. See list population at login.
 					0,
 					0
 				),
@@ -324,10 +325,38 @@ sub pp_poslook {
 	my $p = $srv->get_player($s);
 
 	if (defined $x && defined $y && defined $z) {
-		my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-		$x-- if $x < 0; $z-- if $z < 0;
-		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz) || $p->{'entity'}->{'world'}->get_chunk($cx,$cz)->get_block(int($x % 16),int($y),int($z % 16))->[Block::SOLID]) {
+		my ($wx,$wy,$wz) = (floor($x),floor($y),floor($z));
+		my ($cx,$cz) = (floor($wx / 16),floor($wz / 16));
+
+		if (!$p->{'entity'}->{'world'}->chunk_loaded($cx,$cz)) {
 			$p->update_position();
+			return;
+		}
+
+		my $chunk = $p->{'entity'}->{'world'}->get_chunk($cx,$cz);
+
+		my ($lx,$lz) = ($wx % 16,$wz % 16);
+
+		if ($chunk->get_block($lx,$wy,$lz)->[Block::SOLID]) {
+			$p->update_position();
+			return;
+		}
+
+		if (
+			$p->{'gamemode'} != Player::CREATIVE &&
+			$on_ground &&
+			$chunk->get_block($lx    ,$wy - 1,$lz    )->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx - 1,$wy - 1,$lz - 1)->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx - 1,$wy - 1,$lz    )->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx - 1,$wy - 1,$lz + 1)->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx    ,$wy - 1,$lz - 1)->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx    ,$wy - 1,$lz + 1)->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx + 1,$wy - 1,$lz - 1)->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx + 1,$wy - 1,$lz    )->[Block::TYPE] == Block::AIR &&
+			$chunk->get_block($lx + 1,$wy - 1,$lz + 1)->[Block::TYPE] == Block::AIR
+		) {
+			# Claiming to be on the ground when there is no ground around!
+			$p->kick('Flying, are we?');
 			return;
 		}
 	}
@@ -339,10 +368,21 @@ sub pp_dig {
 	my ($e,$s,$a,$x,$y,$z,$f) = @_;
 	my $p = $srv->get_player($s);
 
-	return if $a != 2 && $p->{'gamemode'} == Player::SURVIVAL; # TODO: Record when a player starts digging and return if he finishes early.
+	return if ($a != 2 && $p->{'gamemode'} == Player::SURVIVAL); # TODO: Record when a player starts digging and return if he finishes early.
 
-	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($x % 16,$y,$z % 16,Block->new());
+	my ($wx,$wy,$wz) = (floor($x),floor($y),floor($z));
+	my ($cx,$cz) = (floor($wx / 16),floor($wz / 16));
+	my ($lx,$lz) = ($wx % 16,$wz % 16);
+
+	my $chunk = $p->{'entity'}->{'world'}->get_chunk($cx,$cz);
+
+	my $block = $chunk->get_block($x % 16,$y,$z % 16);
+
+	return if $block->[Block::TYPE] == Block::AIR;
+
+	$block = Block->new();
+
+	$chunk->set_block($x % 16,$y,$z % 16,$block);
 
 	# TODO: We should probably create an automatic system for sending changes at the end of
 	#       each tick (we've already set_block() so the server knows it has changed and should act on that).
@@ -353,15 +393,26 @@ sub pp_dig {
 				$x,
 				$y,
 				$z,
-				0,
-				0
+				$block->[Block::TYPE],
+				$block->[Block::DATA]
 			)
 		);
 	}
 }
 
 sub pp_place {
-	my ($e,$s,$x,$y,$z,$f,$t,$n,$d)=@_;
+	return if $_[3] == 127;
+	return pp_place_none(@_) if $_[6] < 0;
+	return pp_place_block(@_) if $_[6] < 255;
+	return pp_place_object(@_) if $_[6] > 255;
+}
+
+sub pp_place_none {
+	# Interact?
+}
+
+sub pp_place_block {
+	my ($e,$s,$x,$y,$z,$f,$t,$n,$d) = @_;
 	my $p = $srv->get_player($s);
 
 	my ($bx,$by,$bz) = ($x,$y,$z);
@@ -373,14 +424,22 @@ sub pp_place {
 	$bx++ if $f == 5;
 
 	# TODO: Placing a slab on top of a slab should replace the bottom slab with a double slab.
-	# TODO: Fences cannot be placed wherever.
+	# TODO: Fences cannot be placed wherever. Create a system for this?
 	# TODO: Check if there is already a block in where we want this block.
 	# TODO: Stairs, chest, furnaces, torches and so on need data set for direction.
 
-	my $b = Block->new($t,$d);
+	my ($cx,$cz) = (floor($bx / 16),floor($bz / 16));
+	my ($lx,$lz) = ($bx % 16,$bz % 16);
 
-	my ($cx,$cz) = (floor($x / 16),floor($z / 16));
-	$p->{'entity'}->{'world'}->get_chunk($cx,$cz)->set_block($bx % 16,$by,$bz % 16,$b) or return;
+	my $chunk = $p->{'entity'}->{'world'}->get_chunk($cx,$cz);
+
+	my $block = $chunk->get_block($lx,$by,$lz);
+
+	return if $block->[Block::TYPE] != Block::AIR; # TODO: One can also place blocks in water and lava.
+
+	$block = Block->new($t,$d);
+
+	$chunk->set_block($lx,$by,$lz,$block);
 
 	foreach my $o ($srv->get_players()) {
 		next unless $o->{'entity'}->{'world'}->{'name'} eq $p->{'entity'}->{'world'}->{'name'}; # TODO: Implement a get_players() in World.pm.
@@ -390,8 +449,37 @@ sub pp_place {
 				$bx,
 				$by,
 				$bz,
-				$b->[Block::TYPE],
-				$b->[Block::DATA]
+				$block->[Block::TYPE],
+				$block->[Block::DATA]
+			)
+		);
+	}
+}
+
+sub pp_place_object {
+	# Minecarts, snowballs, arrows...
+}
+
+sub pp_action {
+	my ($e,$s,$i,$a) = @_;
+	my $p = $srv->get_player($s);
+
+	if ($a == Entity::CROUCH) {
+		$p->{'entity'}->{'crouching'} = 1;
+		$p->send(
+			$pf->build(
+				Packet::ANIMATE,
+				$p->{'entity'}->{'id'},
+				104
+			)
+		);
+	} elsif ($a == Entity::UNCROUCH) {
+		$p->{'entity'}->{'crouching'} = 0;
+		$p->send(
+			$pf->build(
+				Packet::ANIMATE,
+				$p->{'entity'}->{'id'},
+				105
 			)
 		);
 	}

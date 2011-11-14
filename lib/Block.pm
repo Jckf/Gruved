@@ -11,6 +11,7 @@ use constant {
 	SKYLIGHT => 3,
 	SOLID => 4,
 
+	AIR => 0,
 	STONE => 1,
 	GRASS => 2,
 	DIRT => 3,
@@ -28,14 +29,14 @@ sub new {
 	my ($class,$type,$data,$blocklight,$skylight) = @_;
 
 	my $self = [
-		defined $type	? $type : 0,
-		defined $data	? $data : 0,
-		defined $blocklight	? $blocklight	: 0xF,
-		defined $skylight	? $skylight		: 0xF,
+		defined $type       ? $type       : AIR,
+		defined $data       ? $data       : 0,
+		defined $blocklight ? $blocklight : 0xF,
+		defined $skylight   ? $skylight   : 0xF,
 		0
 	];
 
-	$self->[SOLID] = $solids->{$self->[TYPE]};
+	$self->[SOLID] = 1 if defined $solids->{$self->[TYPE]};
 
 	bless($self,$class);
 }

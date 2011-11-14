@@ -149,7 +149,10 @@ sub unload_chunk {
 sub kick {
 	my ($self,$msg,$automated) = @_;
 
-	$::log->red(($self->{'runlevel'} >= HELLO ? $self->{'username'} : $self->{'socket'}->peerhost()) . ' was kicked!') if !defined($automated);
+	if (!defined($automated)) {
+		$::log->red(($self->{'runlevel'} >= HELLO ? $self->{'username'} : $self->{'socket'}->peerhost()) . ' was kicked!');
+		$::srv->broadcast($self->{'displayname'} . '§c was kicked! ' . $msg);
+	}
 
 	$self->send(
 		$::pf->build(

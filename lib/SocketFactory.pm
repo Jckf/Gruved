@@ -44,7 +44,8 @@ sub run {
 		'Proto'	    => 'tcp',
 		'LocalPort' => $self->{'port'},
 		'LocalAddr' => $self->{'bind'},
-		'Listen'    => 5
+		'Listen'    => 5,
+		'ReuseAddr' => 1
 	)or die($!);
 
 	$self->{'select'}->add($self->{'listener'});

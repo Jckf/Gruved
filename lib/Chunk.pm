@@ -25,21 +25,14 @@ sub new {
 sub set_block {
 	my ($self,$x,$y,$z,$b) = @_;
 
-	if ($x > 15 || $z > 15 || $y > 127 || $x < 0 || $z < 0 || $y < 0) {
-		$::log->red('Invalid block placement! (' . $x . ',' . $y . ',' . $z . ')');
-		return 0;
-	}
+	$self->{'modified'} = 1;
 
 	my $i = $y + ($z * 128) + ($x * 128 * 16); # TODO: World height.
-
-	$self->{'modified'} = 1;
 
 	vec($self->{'types'     },$i,8) = $b->[Block::TYPE];
 	vec($self->{'data'      },$i,4) = $b->[Block::DATA];
 	vec($self->{'blocklight'},$i,4) = $b->[Block::BLOCKLIGHT];
 	vec($self->{'skylight'  },$i,4) = $b->[Block::SKYLIGHT];
-
-	return 1;
 }
 
 sub get_block {
@@ -58,7 +51,17 @@ sub get_block {
 sub deflate {
 	my ($self) = @_;
 
-	my $z = deflateInit(-Level => Z_NO_COMPRESSION);
+	# Just in case we break something.
+	if (
+		length($self->{'types'}) > 32768 ||
+		length($self->{'data'}) > 16384 ||
+		length($self->{'blocklight'}) > 16384 ||
+		length($self->{'skylight'}) > 16384
+	) {
+		$self = Chunk->new();
+	}
+
+	my $z = deflateInit(-Level => Z_BEST_SPEED);
 
 	return $z->deflate(
 		$self->{'types'} .

@@ -4,6 +4,11 @@ package Entity;
 use strict;
 use warnings;
 
+use constant {
+	CROUCH => 1,
+	UNCROUCH => 2
+};
+
 sub new {
 	my ($class,%options) = @_;
 	my $self = {};
@@ -17,7 +22,8 @@ sub new {
 	$self->{'z'} = 0;
 	$self->{'yaw'} = 0;
 	$self->{'pitch'} = 0;
-	$self->{'on_ground'} = 1;
+	$self->{'on_ground'} = 0;
+	$self->{'crouching'} = 0;
 
 	$self->{$_} = $options{$_} for keys %options;
 

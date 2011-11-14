@@ -33,7 +33,9 @@ $structures[Packet::CHAT    ] = [Packet::STRING16];
 $structures[Packet::TIME    ] = [Packet::LONG];
 $structures[Packet::POSITION] = [Packet::DOUBLE,Packet::DOUBLE,Packet::DOUBLE,Packet::DOUBLE,Packet::BOOL];
 $structures[Packet::POSLOOK ] = [Packet::DOUBLE,Packet::DOUBLE,Packet::DOUBLE,Packet::DOUBLE,Packet::FLOAT,Packet::FLOAT,Packet::BOOL];
+$structures[Packet::ANIMATE ] = [Packet::INT,Packet::BYTE];
 $structures[Packet::SPAWNN  ] = [Packet::INT,Packet::STRING16,Packet::INT,Packet::INT,Packet::INT,Packet::BYTE,Packet::BYTE,Packet::SHORT];
+$structures[Packet::OBJECT  ] = [Packet::INT,Packet::BYTE,Packet::INT,Packet::INT,Packet::INT,Packet::INT];
 $structures[Packet::REMOVE  ] = [Packet::INT];
 $structures[Packet::TELEPORT] = [Packet::INT,Packet::INT,Packet::INT,Packet::INT,Packet::BYTE,Packet::BYTE];
 $structures[Packet::CHUNK   ] = [Packet::INT,Packet::INT,Packet::BOOL];
@@ -44,9 +46,22 @@ $structures[Packet::SLOT    ] = [Packet::BYTE,Packet::SHORT,Packet::SHORT];
 $structures[Packet::LIST    ] = [Packet::STRING16,Packet::BOOL,Packet::SHORT];
 $structures[Packet::QUIT    ] = [Packet::STRING16];
 
+$dynamic[Packet::OBJECT] = sub {
+	if ($_[5]) {
+		return(
+			&{$types[Packet::SHORT]}($_[6]) .
+			&{$types[Packet::SHORT]}($_[7]) .
+			&{$types[Packet::SHORT]}($_[8])
+		);
+	}
+};
+
 $dynamic[Packet::SLOT] = sub {
 	if ($_[2] > -1) {
-		return &{$types[Packet::BYTE]}($_[3]) . &{$types[Packet::SHORT]}($_[4]);
+		return(
+			&{$types[Packet::BYTE]}($_[3]) .
+			&{$types[Packet::SHORT]}($_[4])
+		);
 	}
 };
 

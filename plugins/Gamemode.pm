@@ -23,12 +23,12 @@ sub new {
 
 sub register {
     $::plugins{'Commands'}->bind('gamemode',sub {
-        my ($e,$s,@args) = @_;
+        my ($e,$s,$m) = @_;
 		my $p = $::srv->get_player($s);
 
-        if ($p->{'username'} eq 'Jckf') {
-            $p->set_gamemode(1);
-        }
+        #if ($p->{'username'} eq 'Jckf') {
+            $p->set_gamemode($m);
+        #}
     });
 }
 

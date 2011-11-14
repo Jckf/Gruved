@@ -53,6 +53,7 @@ $types[Packet::STRING16] = sub {
 @{$structures[Packet::CLOSE   ]} = (Packet::BYTE);
 @{$structures[Packet::CLICK   ]} = (Packet::BYTE,Packet::SHORT,Packet::BYTE,Packet::SHORT,Packet::BOOL,Packet::SHORT);
 @{$structures[Packet::CREATIVE]} = (Packet::SHORT,Packet::SHORT,Packet::SHORT,Packet::SHORT);
+@{$structures[Packet::SIGN    ]} = (Packet::INT,Packet::SHORT,Packet::INT,Packet::STRING16,Packet::STRING16,Packet::STRING16);
 @{$structures[Packet::STATUS  ]} = ();
 @{$structures[Packet::QUIT    ]} = ();
 

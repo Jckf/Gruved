@@ -38,7 +38,10 @@ sub nodes {
 }
 
 sub can {
-	my ($self,$player,@node)=@_;
+	my ($self,$ref,@node)=@_;
+
+	my $player = ref $ref eq 'IO::Socket::INET' ? $::srv->get_player($ref) : $ref; # This way we can pass a Player if we have that, or just the socket like everything else does.
+
 	no warnings 'uninitialized'; #I don't want to duplicate every single test with a defined() test ... :/ #
 	my $nodestr;
 	if (scalar(@node) == 1 && $node[0] =~ /\./) {

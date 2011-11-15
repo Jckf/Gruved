@@ -10,31 +10,23 @@ sub new {
 
 	bless($self,$class);
 
-	$self->{'loaded'}=0;
-	
-	if (!$self->checkload()) {
-		$::onload->bind('Commands',sub {$self->checkload()});
-		$::onload->bind('Permissions',sub {$self->checkload()});
+	if (!$self->ready()) {
+		$::onload->bind('Commands'   ,sub { $self->ready() });
+		$::onload->bind('Permissions',sub { $self->ready() });
 	}
 
 	return $self;
 }
 
-sub checkload {
-	my ($self)=@_;
-	if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'}) {
-		$self->register();
-		$self->{'loaded'}=1;
-		return 1;
-	}
-	return 0;
+sub ready {
+	$_[0]->register() if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'});
 }
 
 sub register {
 	$::plugins{'Commands'}->bind('shutdown',sub {
-		my ($e,$s,@args) = @_;
-		if ($::plugins{'Permissions'}->can($::srv->get_player($s),'shutdown')) {
-			exit;
+		if ($::plugins{'Permissions'}->can($_[1],'shutdown')) {
+			$::sf->{'listener'}->close();
+			undef $::sf->{'listener'};
 		}
 	});
 }

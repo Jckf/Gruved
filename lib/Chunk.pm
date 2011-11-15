@@ -58,7 +58,7 @@ sub deflate {
 		length($self->{'blocklight'}) > 16384 ||
 		length($self->{'skylight'}) > 16384
 	) {
-		$self = Chunk->new();
+		return;
 	}
 
 	my $z = deflateInit(-Level => Z_BEST_SPEED);

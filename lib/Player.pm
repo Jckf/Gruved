@@ -110,7 +110,14 @@ sub update_chunks {
 sub load_chunk {
 	my ($self,$x,$z) = @_;
 
-	my $c = $self->{'entity'}->{'world'}->get_chunk($x,$z)->deflate();
+	my $w = $self->{'entity'}->{'world'};
+	my $c = $w->get_chunk($x,$z)->deflate();
+	if (!defined $c) {
+		$::log->cyan('Chunk ' . $x . ',' . $z . ' is broken. Regenerating...');
+		$w->unload_chunk($x,$z);
+		$w->delete_chunk($x,$z);
+		$c = $w->get_chunk($x,$z)->deflate();
+	}
 
 	$self->send(
 		$::pf->build(
@@ -193,7 +200,7 @@ sub load_entity_named {
 sub set_gamemode {
 	my ($self,$m) = @_;
 
-	$self->{'gamemode'} = defined $m ? $m : $::srv->{'gamemode'};
+	$self->{'gamemode'} = defined $m && ($m == 0 || $m == 1) ? $m : $::srv->{'gamemode'};
 
 	$self->send(
 		$::pf->build(

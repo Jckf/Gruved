@@ -10,40 +10,34 @@ sub new {
 
 	bless($self,$class);
 
-	$self->{'loaded'}=0;
-	
-	if (!$self->checkload()) {
-		$::onload->bind('Commands',sub {$self->checkload()});
-		$::onload->bind('Permissions',sub {$self->checkload()});
+	if (!$self->ready()) {
+		$::onload->bind('Commands'   ,sub { $self->ready() });
+		$::onload->bind('Permissions',sub { $self->ready() });
 	}
 
 	return $self;
 }
 
-sub checkload {
-	my ($self)=@_;
-	if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'}) {
-		$self->register();
-		$self->{'loaded'}=1;
-		return 1;
-	}
-	return 0;
+sub ready {
+	$_[0]->register() if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'});
 }
 
 sub register {
 	$::plugins{'Commands'}->bind('time',sub {
-		my ($e,$s,@args) = @_;
-		my $p=$::srv->get_player($s);
-		if (defined $args[0] && $::plugins{'Permissions'}->can($p,'time.set')) {
-			if ($args[0] eq 'day') {
+		my ($e,$s,$time) = @_;
+
+		if (defined $time && $::plugins{'Permissions'}->can($s,'time.set')) {
+			if ($time eq 'day') {
 				$::srv->{'time'} = 6000;
-			} elsif ($args[0] eq 'night') {
+			} elsif ($time eq 'night') {
 				$::srv->{'time'} = 18000;
 			} else {
-				$::srv->{'time'} = $args[0];
+				$::srv->{'time'} = $time;
 			}
 		}
 	});
+
+	return 1;
 }
 
 1;

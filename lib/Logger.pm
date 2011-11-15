@@ -25,8 +25,8 @@ sub clear {
 
 sub header {
 	print color ('black on_white');
-	my $first = ' ' x ((80 - length($_[1])) / 2) . $_[1];
-	print $first . ' ' x (80 - length($first));
+	my $first = ' ' x (39 - length($_[1]) / 2) . $_[1];
+	print $first . ' ' x (79 - length($first)) . "\n";
 	print color ('reset');
 }
 
@@ -37,9 +37,9 @@ sub log {
 
 	print color ('bold yellow');
 	print
-		'' . (1900 + $year) . '/' .
-		sprintf('%02s',$mon) . '/' .
-		sprintf('%02s',$mday) . ' ' .
+		#'' . (1900 + $year) . '/' .
+		#sprintf('%02s',$mon) . '/' .
+		#sprintf('%02s',$mday) . ' ' .
 		sprintf('%02s',$hour) . ':' .
 		sprintf('%02s',$min) . '.' .
 		sprintf('%02s',$sec) . ' '

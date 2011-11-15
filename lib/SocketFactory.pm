@@ -3,7 +3,6 @@ package SocketFactory;
 
 use strict;
 use warnings;
-use Time::HiRes 'sleep';
 use IO::Select;
 use IO::Socket::INET;
 use Events;
@@ -13,7 +12,8 @@ use constant {
 	ACCEPT    => 1,
 	READ      => 2,
 	EXCEPTION => 3,
-	CLOSE     => 4
+	CLOSE     => 4,
+	IDLE      => 5
 };
 
 $SIG{'PIPE'} = 'IGNORE';
@@ -51,15 +51,18 @@ sub run {
 	$self->{'select'}->add($self->{'listener'});
 
 	while ($self->{'listener'}) {
-		my @sockets = $self->{'select'}->can_read(0) or sleep 0.01;
-		foreach my $socket (@sockets) {
-			if (fileno($socket) == fileno($self->{'listener'})) {
-				my $client = $socket->accept();
-				$self->{'select'}->add($client);
-				$self->{'events'}->trigger(ACCEPT,$client);
-			} else {
-				$self->{'events'}->trigger(READ,$socket)
+		if (my @sockets = $self->{'select'}->can_read(0)) {
+			foreach my $socket (@sockets) {
+				if (fileno($socket) == fileno($self->{'listener'})) {
+					my $client = $socket->accept();
+					$self->{'select'}->add($client);
+					$self->{'events'}->trigger(ACCEPT,$client);
+				} else {
+					$self->{'events'}->trigger(READ,$socket)
+				}
 			}
+		} else {
+			$self->{'events'}->trigger(IDLE);
 		}
 		$self->{'events'}->trigger(TICK);
 	}

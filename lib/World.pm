@@ -14,8 +14,8 @@ sub new {
 	my $self = {};
 
 	$self->{'timer'} = Timer->new(30,int rand(30));
-	$self->{'timer'}->bind(sub { $::log->cyan('Saving world '.($self->{'name'}).'...'); $self->save() });
-	$::sf->bind(SocketFactory::TICK,sub { $self->{'timer'}->tick() });
+	$self->{'timer'}->bind(sub { $self->save() });
+	$::tick->bind(sub { $self->{'timer'}->tick() });
 
 	$self->{'chunks'} = {};
 	$self->{'generator'} = ChunkGenerator->new();
@@ -74,6 +74,14 @@ sub unload_chunk {
 	delete($self->{'chunks'}->{$x . ',' . $z});
 
 	return 1;
+}
+
+sub delete_chunk {
+	my ($self,$x,$z) = @_;
+
+	my $f = 'worlds/' . $self->{'name'} . '/chunks/' . $x . ',' . $z;
+	return 0 if !-e $f;
+	return unlink $f;
 }
 
 sub chunk_loaded { defined($_[0]->{'chunks'}->{$_[1] . ',' . $_[2]}) }

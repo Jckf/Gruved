@@ -3,7 +3,8 @@ package Logger;
 
 use strict;
 use warnings;
-use Term::ANSIColor;
+use Term::ANSIScreen qw(:all);
+use Scalar::Util qw(blessed);
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -16,11 +17,18 @@ our $AUTOLOAD;
 sub new {
 	my ($class) = @_;
 	my $self = {};
+	
+	#Initialize "background fix" for non-black terminals
+	$self->{'bgcolor'}='black'; #<< Change here for testing
+	print color ('on_'.$self->{'bgcolor'});
+	cldown();
+	print color ('reset');
+	
 	bless($self,$class);
 }
 
 sub header {
-	print color ('black on_white');
+	print color ('on_'.$_[0]->{'bgcolor'}.' reverse');
 	my $first = ' ' x (39 - length($_[1]) / 2) . $_[1];
 	print $first . ' ' x (79 - length($first));
 	print color ('reset');
@@ -32,7 +40,7 @@ sub log {
 
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 
-	print color ('bold yellow');
+	print color ('on_'.$self->{'bgcolor'}.' bold yellow');
 	print
 		#'' . (1900 + $year) . '/' .
 		#sprintf('%02s',$mon) . '/' .
@@ -43,9 +51,9 @@ sub log {
 	;
 
 	if (defined($data2)) {
-		print color ($data2);
+		print color ('on_'.$self->{'bgcolor'}.' '.$data2);
 	} else {
-		print color ('reset');
+		print color ('on_'.$self->{'bgcolor'}.'reset');
 	}
 
 	print $data1;
@@ -66,6 +74,7 @@ sub AUTOLOAD {
 
 sub DESTROY {
 	print color ('reset');
+	cldown();
 }
 
 1;

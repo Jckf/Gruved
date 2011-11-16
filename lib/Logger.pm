@@ -139,9 +139,9 @@ sub AUTOLOAD {
 	
 	my ($t);
 	
-	if ($c=~/^(?:([biu]*)([cr]?)_)?(.*)$/) {
-		$t=$2.$1 || '';
-		$c=$3 || $2 || $1;
+	if ($c=~/^(?:([biucr]*)_)?(.*)$/) {
+		$t=$1 || '';
+		$c=$2 || $1;
 		$c="$c on_white" if $t=~/i/;
 		if ($t =~ /c/) {
 			$data=$self->center($data,$t =~ /b/);

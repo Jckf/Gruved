@@ -67,9 +67,9 @@ sub _check {
 	}
 
 	return 1 if first { $_ eq $nodestr } @{$self->{'player'}->{$player->{'username'}}};
-
+	
 	foreach my $g (values %{$self->{'group'}}) {
-		next unless first { $_ eq $player->{'username'} } @{$g->{'members'}};
+		next unless first { $_ eq $player->{'username'} || $_ eq '*' } @{$g->{'members'}};
 		return 1 if first { $_ eq $nodestr } @{$g->{'nodes'}};
 
 		foreach my $n (-1 .. @node - 1) {

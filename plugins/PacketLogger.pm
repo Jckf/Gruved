@@ -54,7 +54,7 @@ sub recv {
 
 sub open {
 	my ($self)=@_;
-	$self->{'file'}=new IO::File 'packets.log', O_CREAT|O_WRONLY|O_APPEND;
+	$self->{'file'}=new IO::File 'packets.log', O_WRONLY;
 	if (!$self->{'file'}) {
 		$::log->red('PacketLogger failed to open packets.log for writing: '.$!);
 		return;

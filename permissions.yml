@@ -1,0 +1,13 @@
+---
+group:
+  op:
+    nodes:
+      - *
+    members:
+      - Jckf
+      - Gosha
+  default:
+    members:
+      - *
+    nodes:
+      - gamemode.set

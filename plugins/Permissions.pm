@@ -17,6 +17,8 @@ sub new {
 
 	$self->load($file);
 
+	*Player::has_permission = \&_check;
+
 	return $self;
 }
 
@@ -45,11 +47,10 @@ sub nodes {
 	return $self->{'nodes'};
 }
 
-sub can {
-	my ($self,$ref,@node) = @_;
-
-	my $player = ref $ref eq 'IO::Socket::INET' ? $::srv->get_player($ref) : $ref; # This way we can pass a Player if we have that, or just the socket like everything else does.
-
+sub _check {
+	my ($player,$ref,@node) = @_;
+	my $self = $::plugins{'Permissions'}; # Quick fix for monkey-patching _check() to Player::has_permission().
+	
 	no warnings 'uninitialized'; #I don't want to duplicate every single test with a defined() test ... :/ #
 
 	my $nodestr;

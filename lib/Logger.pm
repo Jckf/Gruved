@@ -51,7 +51,7 @@ sub log {
 	print $data1;
 
 	print color ('reset');
-	
+
 	print "\n";
 }
 

@@ -61,7 +61,7 @@ sub AUTOLOAD {
 	my $c = uc $AUTOLOAD;
 	$c =~ s/.*://;
 
-	return $self->log($data,$c) if $c ne 'DESTROY';
+	$self->log($data,$c) if $c ne 'DESTROY';
 }
 
 sub DESTROY {

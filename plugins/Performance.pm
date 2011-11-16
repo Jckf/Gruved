@@ -63,7 +63,7 @@ sub init {
 	my ($self) = @_;
 
 	$::plugins{'Commands'}->bind('performance',sub {
-		$::srv->get_player($_[0])->message('Server utilization is at ' . int($self->{'utilization'} * 100) . '%');
+		$::srv->get_player($_[1])->message('Server utilization is at ' . int($self->{'utilization'} * 100) . '%');
 	});
 }
 

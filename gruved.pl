@@ -21,8 +21,8 @@ local $SIG{'INT'} = sub {
 
 our $log = Logger->new();
 
-$log->header('Gruved, the Minecraft server daemon');
-$log->header('Distributed under the GNU GPL v3 license');
+$log->bc_reverse('Gruved, the Minecraft server daemon');
+$log->bc_reverse('Distributed under the GNU GPL v3 license');
 
 $log->magenta('Initializing core objects...');
 
@@ -118,7 +118,7 @@ $sf->run(); # TODO: Make $srv handle the main event loop.
 $_->kick('Server is shutting down',1) for $srv->get_players();
 $worlds{$_}->save() for keys %worlds;
 
-$log->red('Server stopped!');
+$log->b_red('Server stopped!');
 
 exit;
 

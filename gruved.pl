@@ -22,8 +22,6 @@ local $SIG{'INT'} = sub {
 
 our $log = Logger->new();
 
-$log->clear();
-
 $log->header('Gruved, the Minecraft server daemon');
 $log->header('Distributed under the GNU GPL v3 license');
 

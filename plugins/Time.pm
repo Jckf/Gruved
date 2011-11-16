@@ -14,7 +14,7 @@ sub new {
 	bless($self,$class);
 }
 
-sub register {
+sub init {
 	$::plugins{'Commands'}->bind('time',sub {
 		my ($e,$s,$time) = @_;
 
@@ -28,8 +28,6 @@ sub register {
 			}
 		}
 	});
-
-	return 1;
 }
 
 1;

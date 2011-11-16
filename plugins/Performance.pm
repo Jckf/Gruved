@@ -16,6 +16,8 @@ sub new {
 	my ($class) = @_;
 
 	my $self = {
+		'dependencies' => ['Commands'],
+
 		'sf_tick'   => 0,
 		'sf_idle'   => 0,
 		'pp_filter' => 0,
@@ -55,6 +57,14 @@ sub new {
 	$::tick->bind(                       sub { $self->{'mc_tick'  }++ });
 
 	bless($self,$class);
+}
+
+sub init {
+	my ($self) = @_;
+
+	$::plugins{'Commands'}->bind('performance',sub {
+		$::srv->get_player($_[0])->message('Server utilization is at ' . int($self->{'utilization'} * 100) . '%');
+	});
 }
 
 1;

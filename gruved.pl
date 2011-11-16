@@ -72,6 +72,18 @@ our %plugins; {
 		my $plugin = $file; $plugin =~ s/.*\/(.*)\.pm/$1/i;
 
 		if (do $file && ($plugins{$plugin} = $plugin->new())) {
+			if (defined $plugins{$plugin}->{'dependencies'}) {
+				my $init = sub {
+					for (@{$plugins{$plugin}->{'dependencies'}}) {
+						return if !defined $plugins{$_};
+					}
+					$plugins{$plugin}->init() if $plugins{$plugin}->can('init');
+					$plugins{$plugin}->{'dependencies'} = undef;
+				};
+
+				$onload->bind($_,$init) for @{$plugins{$plugin}->{'dependencies'}};
+				&{$init}();
+			}
 			$onload->trigger($plugin);
 		} elsif ($@)  {
 			$log->red("\t" . $plugin . ': ' . $@);

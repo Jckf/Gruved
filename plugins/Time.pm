@@ -6,27 +6,19 @@ use warnings;
 
 sub new {
 	my ($class) = @_;
-	my $self = {};
+
+	my $self = {
+		'dependencies' => ['Commands','Permissions']
+	};
 
 	bless($self,$class);
-
-	if (!$self->ready()) {
-		$::onload->bind('Commands'   ,sub { $self->ready() });
-		$::onload->bind('Permissions',sub { $self->ready() });
-	}
-
-	return $self;
-}
-
-sub ready {
-	$_[0]->register() if (defined $::plugins{'Commands'} && defined $::plugins{'Permissions'});
 }
 
 sub register {
 	$::plugins{'Commands'}->bind('time',sub {
 		my ($e,$s,$time) = @_;
 
-		if (defined $time && $::plugins{'Permissions'}->can($s,'time.set')) {
+		if (defined $time && $::srv->get_player($s)->has_permission('time.set')) {
 			if ($time eq 'day') {
 				$::srv->{'time'} = 6000;
 			} elsif ($time eq 'night') {

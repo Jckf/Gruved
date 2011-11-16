@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use Devel::SimpleTrace;
-use POSIX 'floor';
 use lib 'lib';
 use Logger;
 use Eventss;

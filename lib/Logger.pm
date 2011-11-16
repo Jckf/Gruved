@@ -19,15 +19,12 @@ sub new {
 	bless($self,$class);
 }
 
-sub clear {
-	# We can't do that yet.
-}
-
 sub header {
 	print color ('black on_white');
 	my $first = ' ' x (39 - length($_[1]) / 2) . $_[1];
-	print $first . ' ' x (79 - length($first)) . "\n";
+	print $first . ' ' x (79 - length($first));
 	print color ('reset');
+	print "\n";
 }
 
 sub log {
@@ -51,9 +48,11 @@ sub log {
 		print color ('reset');
 	}
 
-	print $data1 . "\n";
+	print $data1;
 
 	print color ('reset');
+	
+	print "\n";
 }
 
 sub AUTOLOAD {

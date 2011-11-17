@@ -48,7 +48,7 @@ sub nodes {
 }
 
 sub _check {
-	my ($player,$ref,@node) = @_;
+	my ($player,@node) = @_;
 	my $self = $::plugins{'Permissions'}; # Quick fix for monkey-patching _check() to Player::has_permission().
 	
 	no warnings 'uninitialized'; #I don't want to duplicate every single test with a defined() test ... :/ #
@@ -69,7 +69,7 @@ sub _check {
 	return 1 if first { $_ eq $nodestr } @{$self->{'player'}->{$player->{'username'}}};
 	
 	foreach my $g (values %{$self->{'group'}}) {
-		next unless first { $_ eq $player->{'username'} || $_ eq '*' } @{$g->{'members'}};
+		next unless first { $_ eq $player->{'username'} or $_ eq '*' } @{$g->{'members'}};
 		return 1 if first { $_ eq $nodestr } @{$g->{'nodes'}};
 
 		foreach my $n (-1 .. @node - 1) {

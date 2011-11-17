@@ -56,10 +56,13 @@ sub save_chunk {
 
 	my $d = 'worlds/' . $self->{'name'} . '/chunks';
 	mkdir $d if !-d $d;
-
-	nstore($chunk,$d . '/' . $x . ',' . $z) or return 0;
-
+	
 	$chunk->{'modified'} = 0;
+	
+	nstore($chunk,$d . '/' . $x . ',' . $z) or do {
+		$chunk->{'modified'} = 1;
+		return 0;
+	};
 
 	return 1;
 }

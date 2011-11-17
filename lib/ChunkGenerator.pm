@@ -29,7 +29,7 @@ sub generate {
 		foreach my $x (0 .. 15) {
 			foreach my $z (0 .. 15) {
 				foreach my $y (0 .. @{$_[0]->{'layers'}}) {
-					$chunk->set_block($x,$y + 32,$z,Block->new($_[0]->{'layers'}->[$y]));
+					$chunk->set_block($x,$y + 32,$z,Block->new($_[0]->{'layers'}->[$y],0x0,0xF));
 				}
 			}
 		}

@@ -15,9 +15,9 @@ sub new {
 	my $n = 16 * 16 * 128; # TODO: World height.
 
 	$self->{'types'} = "\0" x $n;
-	$self->{'data'} = "\0" x ($n / 2);
-	$self->{'blocklight'} = chr(0xF) x ($n / 2);
-	$self->{'skylight'} = chr(0xF) x ($n / 2);
+	$self->{'data'} = chr(0) x ($n / 2);
+	$self->{'blocklight'} = chr(0x00) x ($n / 2);
+	$self->{'skylight'} = chr(0xFF) x ($n / 2);
 
 	bless($self,$class);
 }

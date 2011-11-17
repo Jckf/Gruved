@@ -31,8 +31,8 @@ sub new {
 	my $self = [
 		defined $type       ? $type       : AIR,
 		defined $data       ? $data       : 0,
-		defined $blocklight ? $blocklight : 0xF,
-		defined $skylight   ? $skylight   : 0xF,
+		defined $blocklight ? $blocklight : 0x0,
+		defined $skylight   ? $skylight   : 0x0,
 		0
 	];
 
